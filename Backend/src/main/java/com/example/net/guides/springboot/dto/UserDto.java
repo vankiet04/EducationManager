@@ -1,31 +1,77 @@
 package com.example.net.guides.springboot.dto;
-import jakarta.persistence.*;
-import jakarta.validation.constraints.Email;
-import jakarta.validation.constraints.NotEmpty;
 
+import java.util.ArrayList;
+import java.util.List;
 
-import lombok.AllArgsConstructor;
-import lombok.Getter;
-import lombok.NoArgsConstructor;
-import lombok.Setter;
+public class UserDto {
 
-@Getter
-@Setter
-@NoArgsConstructor
-@AllArgsConstructor
-public class UserDto
-{
-    private Long id;
-    @NotEmpty
-    private String firstName;
-    @NotEmpty
-    private String lastName;
-    @NotEmpty(message = "Email should not be empty")
-    @Email
-    private String email;
-    @NotEmpty(message = "Password should not be empty")
+    private String username;
+
     private String password;
+    
+    private String hoTen;
+    
+    private String email;
+    
+    private String soDienThoai;
+    
+    private List<DTO_Role> roles = new ArrayList<>();
+    
+    private Integer namSinh;
 
+    public String getUsername() {
+        return username;
+    }
+    
+    public void setUsername(String username) {
+        this.username = username;
+    }
+    
+    public String getPassword() {
+        return password;
+    }
+    
+    public void setPassword(String password) {
+        this.password = password;
+    }
+    
+    public String getHoTen() {
+        return hoTen;
+    }
+    
+    public void setHoTen(String hoTen) {
+        this.hoTen = hoTen;
+    }
+    
+    public String getEmail() {
+        return email;
+    }
+    
+    public void setEmail(String email) {
+        this.email = email;
+    }
+    
+    public String getSoDienThoai() {
+        return soDienThoai;
+    }
+    
+    public void setSoDienThoai(String soDienThoai) {
+        this.soDienThoai = soDienThoai;
+    }
 
+    public List<DTO_Role> getRoles() {
+        return roles;
+    }
 
+    public void setRoles(List<DTO_Role> roles) {
+        this.roles = roles;
+    }
+
+    public Integer getNamSinh() {
+        return namSinh;
+    }
+
+    public void setNamSinh(Integer namSinh) {
+        this.namSinh = namSinh;
+    }
 }

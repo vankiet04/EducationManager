@@ -1,108 +1,53 @@
 package com.example.net.guides.springboot.service;
-
 import com.example.net.guides.springboot.dto.UserDto;
-import com.example.net.guides.springboot.entity.Role;
-import com.example.net.guides.springboot.entity.User;
-import com.example.net.guides.springboot.repository.RoleRepository;
+import com.example.net.guides.springboot.model.Role;
+import com.example.net.guides.springboot.model.User;
 import com.example.net.guides.springboot.repository.UserRepository;
-import jakarta.transaction.Transactional;
+import com.example.net.guides.springboot.service.UserService;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import java.util.Collections;
+import com.example.net.guides.springboot.repository.RoleRepository;
+import java.util.ArrayList;
 import java.util.List;
-import java.util.stream.Collectors;
 
 @Service
 public class UserServiceImpl implements UserService {
 
+    @Autowired
     private UserRepository userRepository;
+
+    @Autowired
     private RoleRepository roleRepository;
+
+    @Autowired
     private PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepository userRepository,
-            RoleRepository roleRepository,
-            PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    @Transactional
     @Override
     public void saveUser(UserDto userDto) {
-        try {
-            User user = new User();
-            user.setName(userDto.getFirstName() + " " + userDto.getLastName());
-            // Thêm username (dùng email làm username hoặc kết hợp firstName+lastName)
-            user.setUsername(userDto.getEmail());
-            user.setEmail(userDto.getEmail());
-            user.setPassword(passwordEncoder.encode(userDto.getPassword()));
-
-            // Sửa đoạn code lỗi với Set<Role>
-            Role role = checkRoleExist();
-            user.setRoles(Collections.singleton(role));
-
-            userRepository.save(user);
-            System.out.println("User saved successfully: " + user.getEmail());
-        } catch (Exception e) {
-            System.err.println("Error saving user: " + e.getMessage());
-            e.printStackTrace();
-            throw e; 
-        }
-    }
-
-    @Override
-    public List<UserDto> findAllUsers() {
-        List<User> users = userRepository.findAll();
-        return users.stream()
-                .map((user) -> mapToUserDto(user))
-                .collect(Collectors.toList());
-    }
-
-    private UserDto mapToUserDto(User user) {
-        UserDto userDto = new UserDto();
-        userDto.setId(user.getId()); 
-        String[] str = user.getName().split(" ");
-        userDto.setFirstName(str[0]);
-        userDto.setLastName(str[1]);
-        userDto.setEmail(user.getEmail());
-        return userDto;
-    }
-
-    private Role checkRoleExist() {
-        Role role = roleRepository.findByName("ROLE_ADMIN").orElse(null);
+        User user = new User();
+        user.setUsername(userDto.getUsername());
+        user.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        user.setHoTen(userDto.getHoTen());
+        user.setEmail(userDto.getEmail());
+        user.setSoDienThoai(userDto.getSoDienThoai());
+        user.setNamSinh(userDto.getNamSinh());
         
-        if (role == null) {
-            role = new Role();
-            role.setName("ROLE_ADMIN");
-            role = roleRepository.save(role);
+        List<Role> roles = new ArrayList<>();
+        for (int i = 0; i < userDto.getRoles().size(); i++) {
+            String current_role = userDto.getRoles().get(i).getName();
+            Role role = roleRepository.findByName(userDto.getRoles().get(i).getName())
+                    .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + current_role));
+            roles.add(role);
         }
-        
-        return role;
+
+        user.setRoles(roles);
+        userRepository.save(user);
     }
 
     @Override
-    public User findUserByEmail(String email) {
-        // TODO Auto-generated method stub
-        return userRepository.findByEmail(email).orElse(null);
+    public User findUserByUsername(String username) {
+        return userRepository.findByUsername(username).orElse(null);
     }
-
-    @Override
-    @Transactional
-    public void deleteUser(Long id) {
-        try {
-            User user = userRepository.findById(id).orElse(null);
-            if (user != null) {
-                user.setRoles(Collections.emptySet());
-                userRepository.save(user);
-                userRepository.deleteById(id);
-                System.out.println("User with ID " + id + " was deleted successfully");
-            }
-        } catch (Exception e) {
-            System.err.println("Error deleting user: " + e.getMessage());
-            throw e;
-        }
-    }
-
-    
 }
