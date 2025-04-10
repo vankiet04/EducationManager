@@ -28,11 +28,11 @@ public class Score {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     
-    @Column(name = "decuong_id", nullable = false)
-
+    
     @ManyToOne (fetch = FetchType.LAZY)
+    @JoinColumn(name = "decuong_id", nullable = false)
     private OutlineDetail outlineDetail;
-
+    
     @Column(name = "ten_cot_diem", nullable = false, length = 100)
     private String tenCotDiem;
 

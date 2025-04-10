@@ -15,6 +15,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
+import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 
 @Entity
@@ -38,7 +39,7 @@ public class OutlineDetail {
     @Column(name = "thoi_gian", nullable = false, length = 20)
     private String thoiGian;
 
-    @JoinColumn(name = "decuong_id", nullable = false)
+    @OneToMany(mappedBy = "outlineDetail", fetch = FetchType.LAZY)
     private List<Score> scores = new ArrayList<>();
 }
 
