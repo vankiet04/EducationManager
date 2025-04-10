@@ -11,6 +11,6 @@ public interface ScoreRepository extends JpaRepository<Score, Integer> {
     Optional<Score> findById (Integer id);
     //List<Score> findbyOutlineDetailID (Integer outlineDetailID);
     
-    List<Score> findByOutlineDetailId(Integer outlineDetailId);
+    List<Score> findByOutlineDetailId (Integer outlineDetailId);
 }
 
