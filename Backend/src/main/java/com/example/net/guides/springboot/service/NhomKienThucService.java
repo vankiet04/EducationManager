@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
 import com.example.net.guides.springboot.model.NhomKienThuc;
@@ -26,4 +28,7 @@ public class NhomKienThucService {
         return nhomKienThucRepo.save(nhomKienThuc);
     }
 
+    public Page<NhomKienThuc> getAllPaging(int page, int size) {
+        return nhomKienThucRepo.findAll(PageRequest.of(page, size));
+    }
 }

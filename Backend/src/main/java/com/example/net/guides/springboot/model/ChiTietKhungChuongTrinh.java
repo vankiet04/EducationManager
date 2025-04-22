@@ -29,12 +29,10 @@ public class ChiTietKhungChuongTrinh {
 
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_manhom")
-    @JsonIgnore
     private NhomKienThuc nhomKienThuc;
     
     @ManyToOne(fetch = FetchType.LAZY)
     @JoinColumn(name = "id_khungchuongtrinh")
-    @JsonIgnore
     private KhungChuongTrinh khungChuongTrinh;
 
 
