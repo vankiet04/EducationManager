@@ -55,7 +55,6 @@ public class NhomKienThucController {
         return ResponseEntity.ok(nhomKienThucService.save(nkt));
     }
 
-    // hàm này sẽ ko cần nhưng làm cho biết thoi ^^
     @PutMapping("/{id}")
     public ResponseEntity<NhomKienThuc> update(@PathVariable int id, @RequestBody NhomKienThuc nkt){
         if( !nhomKienThucService.getById(id).isPresent())
@@ -63,7 +62,6 @@ public class NhomKienThucController {
         return ResponseEntity.ok(nhomKienThucService.save(nkt));
     }
 
-    // hàm này sẽ ko cần nhưng làm cho biết thoi ^^
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> delete(@PathVariable int id) {
         Optional<NhomKienThuc> op = nhomKienThucService.getById(id);
