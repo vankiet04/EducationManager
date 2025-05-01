@@ -36,7 +36,6 @@ public class AuthRestController {
                 roles.add(userRole);
                 userDto.setRoles(roles);
             }
-            
             userService.saveUser(userDto);
             
             return new ResponseEntity<>(Map.of("message", "Đăng ký thành công!"), 

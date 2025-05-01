@@ -10,7 +10,6 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.net.guides.springboot.dto.ChiTietKhungChuongTrinhDTO;
-import com.example.net.guides.springboot.model.ChiTietKhungChuongTrinh;
 import com.example.net.guides.springboot.service.ChiTietKhungChuongtrinhService;
 
 @RestController

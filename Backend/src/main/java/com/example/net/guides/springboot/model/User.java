@@ -14,7 +14,9 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.JoinTable;
 import jakarta.persistence.ManyToMany;
 import jakarta.persistence.Table;
+import lombok.Data;
 
+@Data
 @Entity
 @Table(name = "user")
 public class User {
@@ -23,16 +25,16 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
     
-    @Column(name = "username", nullable = false, length = 50)
+    @Column(name = "username", length = 50, unique = true)
     private String username;
     
-    @Column(name = "password", nullable = false, length = 255)
+    @Column(name = "password", length = 100)
     private String password;
     
-    @Column(name = "ho_ten", nullable = false, length = 100)
+    @Column(name = "ho_ten", length = 100)
     private String hoTen;
     
-    @Column(name = "email", length = 100)
+    @Column(name = "email", length = 100, unique = true)
     private String email;
     
     @Column(name = "so_dien_thoai", length = 20)
@@ -41,8 +43,8 @@ public class User {
     @Column(name = "nam_sinh")
     private Integer namSinh;
     
-    @Column(name = "trang_thai", columnDefinition = "tinyint default 1")
-    private Boolean trangThai = true;
+    @Column(name = "trang_thai")
+    private Boolean trangThai;
     
     @ManyToMany(fetch = FetchType.EAGER)
     @JoinTable(

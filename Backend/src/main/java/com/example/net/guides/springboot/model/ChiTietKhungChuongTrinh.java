@@ -36,8 +36,6 @@ public class ChiTietKhungChuongTrinh {
     private KhungChuongTrinh khungChuongTrinh;
 
 
-
-
     @Column(name="sotinchibatbuoc")
     private Integer soTinChiBatBuoc;
     
