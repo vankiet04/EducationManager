@@ -52,13 +52,23 @@ public class GiangVienController {
         return ResponseEntity.ok(giangVienService.getByHoTen(hoTen));
     }
 
-    @GetMapping("/email/{email}")
-    public ResponseEntity<GiangVien> getByEmail(@PathVariable String email) {
-        GiangVien giangVien = giangVienService.getByEmail(email);
+    @GetMapping("/user/{userId}")
+    public ResponseEntity<GiangVien> getByUserId(@PathVariable Integer userId) {
+        GiangVien giangVien = giangVienService.getByUserId(userId);
         if (giangVien != null) {
             return ResponseEntity.ok(giangVien);
         }
         return ResponseEntity.notFound().build();
+    }
+
+    @GetMapping("/khoa/{khoa}")
+    public ResponseEntity<List<GiangVien>> getByKhoa(@PathVariable String khoa) {
+        return ResponseEntity.ok(giangVienService.getByKhoa(khoa));
+    }
+
+    @GetMapping("/bomon/{boMon}")
+    public ResponseEntity<List<GiangVien>> getByBoMon(@PathVariable String boMon) {
+        return ResponseEntity.ok(giangVienService.getByBoMon(boMon));
     }
 
     @PostMapping
@@ -76,10 +86,10 @@ public class GiangVienController {
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable Integer id) {
-        if (giangVienService.getById(id) != null) {
-            giangVienService.delete(id);
-            return ResponseEntity.ok().build();
+    public ResponseEntity<GiangVien> delete(@PathVariable Integer id) {
+        GiangVien giangVien = giangVienService.delete(id);
+        if (giangVien != null) {
+            return ResponseEntity.ok(giangVien);
         }
         return ResponseEntity.notFound().build();
     }

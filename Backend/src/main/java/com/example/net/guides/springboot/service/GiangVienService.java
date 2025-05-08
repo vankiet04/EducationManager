@@ -30,15 +30,28 @@ public class GiangVienService {
         return giangVienRepository.findByHoTenContaining(hoTen);
     }
 
-    public GiangVien getByEmail(String email) {
-        return giangVienRepository.findByEmail(email);
+    public GiangVien getByUserId(Integer userId) {
+        return giangVienRepository.findByUserId(userId);
+    }
+
+    public List<GiangVien> getByKhoa(String khoa) {
+        return giangVienRepository.findByKhoa(khoa);
+    }
+
+    public List<GiangVien> getByBoMon(String boMon) {
+        return giangVienRepository.findByBoMon(boMon);
     }
 
     public GiangVien save(GiangVien giangVien) {
         return giangVienRepository.save(giangVien);
     }
 
-    public void delete(Integer id) {
-        giangVienRepository.deleteById(id);
+    public GiangVien delete(Integer id) {
+        GiangVien giangVien = giangVienRepository.findById(id).orElse(null);
+        if (giangVien != null) {
+            giangVien.setTrangThai(0);
+            return giangVienRepository.save(giangVien);
+        }
+        return null;
     }
 } 

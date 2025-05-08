@@ -17,20 +17,27 @@ public class GiangVien {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @Column(name = "ma_giang_vien", length = 20)
+    @Column(name = "user_id", length = 11)
+    private Integer userId;
+
+
+    @Column(name = "ma_gv", length = 50)
     private String maGiangVien;
+
+    @Column(name = "bo_mon", length = 100)
+    private String boMon;
+
+    @Column(name = "khoa", length = 100)
+    private String khoa;
+
+    @Column(name = "trinh_do", length = 50)
+    private String trinhDo;
+
+    @Column(name = "chuyen_mon", length = 100)
+    private String chuyenMon;
 
     @Column(name = "ho_ten", length = 100)
     private String hoTen;
-
-    @Column(name = "email", length = 100)
-    private String email;
-
-    @Column(name = "so_dien_thoai", length = 20)
-    private String soDienThoai;
-
-    @Column(name = "chuc_vu", length = 50)
-    private String chucVu;
 
     @Column(name = "trang_thai")
     private Integer trangThai;

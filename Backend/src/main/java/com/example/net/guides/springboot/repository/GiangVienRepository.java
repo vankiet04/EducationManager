@@ -17,6 +17,12 @@ public interface GiangVienRepository extends JpaRepository<GiangVien, Integer> {
     @Query("SELECT g FROM GiangVien g WHERE g.hoTen LIKE %?1%")
     List<GiangVien> findByHoTenContaining(String hoTen);
 
-    @Query("SELECT g FROM GiangVien g WHERE g.email = ?1")
-    GiangVien findByEmail(String email);
+    @Query("SELECT g FROM GiangVien g WHERE g.userId = ?1")
+    GiangVien findByUserId(Integer userId);
+
+    @Query("SELECT g FROM GiangVien g WHERE g.khoa = ?1")
+    List<GiangVien> findByKhoa(String khoa);
+
+    @Query("SELECT g FROM GiangVien g WHERE g.boMon = ?1")
+    List<GiangVien> findByBoMon(String boMon);
 } 

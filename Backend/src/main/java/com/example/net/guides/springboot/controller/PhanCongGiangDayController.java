@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.net.guides.springboot.model.PhanCongGiangDay;
+import com.example.net.guides.springboot.dto.PhanCongGiangDayDTO;
 import com.example.net.guides.springboot.service.PhanCongGiangDayService;
 
 @RestController
@@ -24,26 +25,26 @@ public class PhanCongGiangDayController {
     private PhanCongGiangDayService phanCongGiangDayService;
 
     @GetMapping
-    public ResponseEntity<List<PhanCongGiangDay>> getAll() {
+    public ResponseEntity<List<PhanCongGiangDayDTO>> getAll() {
         return ResponseEntity.ok(phanCongGiangDayService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<PhanCongGiangDay> getById(@PathVariable Integer id) {
-        PhanCongGiangDay phanCongGiangDay = phanCongGiangDayService.getById(id);
-        if (phanCongGiangDay != null) {
-            return ResponseEntity.ok(phanCongGiangDay);
+    public ResponseEntity<PhanCongGiangDayDTO> getById(@PathVariable Integer id) {
+        PhanCongGiangDayDTO dto = phanCongGiangDayService.getById(id);
+        if (dto != null) {
+            return ResponseEntity.ok(dto);
         }
         return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/nhom/{nhomId}")
-    public ResponseEntity<List<PhanCongGiangDay>> getByNhomId(@PathVariable Integer nhomId) {
+    public ResponseEntity<List<PhanCongGiangDayDTO>> getByNhomId(@PathVariable Integer nhomId) {
         return ResponseEntity.ok(phanCongGiangDayService.getByNhomId(nhomId));
     }
 
     @GetMapping("/giangvien/{giangVienId}")
-    public ResponseEntity<List<PhanCongGiangDay>> getByGiangVienId(@PathVariable Integer giangVienId) {
+    public ResponseEntity<List<PhanCongGiangDayDTO>> getByGiangVienId(@PathVariable Integer giangVienId) {
         return ResponseEntity.ok(phanCongGiangDayService.getByGiangVienId(giangVienId));
     }
 
