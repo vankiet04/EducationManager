@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.example.net.guides.springboot.model.KeHoachMonHom;
+import com.example.net.guides.springboot.dto.KeHoachMonHomDTO;
 import com.example.net.guides.springboot.service.KeHoachMonHomService;
 
 @RestController
@@ -25,26 +26,26 @@ public class KeHoachMonHomController {
     private KeHoachMonHomService keHoachMonHomService;
 
     @GetMapping
-    public ResponseEntity<List<KeHoachMonHom>> getAll() {
+    public ResponseEntity<List<KeHoachMonHomDTO>> getAll() {
         return ResponseEntity.ok(keHoachMonHomService.getAll());
     }
 
     @GetMapping("/{id}")
-    public ResponseEntity<KeHoachMonHom> getById(@PathVariable Integer id) {
-        KeHoachMonHom keHoachMonHom = keHoachMonHomService.getById(id);
-        if (keHoachMonHom != null) {
-            return ResponseEntity.ok(keHoachMonHom);
+    public ResponseEntity<KeHoachMonHomDTO> getById(@PathVariable Integer id) {
+        KeHoachMonHomDTO dto = keHoachMonHomService.getById(id);
+        if (dto != null) {
+            return ResponseEntity.ok(dto);
         }
         return ResponseEntity.notFound().build();
     }
 
     @GetMapping("/hocphan/{hocPhanId}")
-    public ResponseEntity<List<KeHoachMonHom>> getByHocPhanId(@PathVariable Integer hocPhanId) {
+    public ResponseEntity<List<KeHoachMonHomDTO>> getByHocPhanId(@PathVariable Integer hocPhanId) {
         return ResponseEntity.ok(keHoachMonHomService.getByHocPhanId(hocPhanId));
     }
 
     @GetMapping("/search")
-    public ResponseEntity<List<KeHoachMonHom>> getByNamHocAndHocKy(
+    public ResponseEntity<List<KeHoachMonHomDTO>> getByNamHocAndHocKy(
             @RequestParam String namHoc,
             @RequestParam Integer hocKy) {
         return ResponseEntity.ok(keHoachMonHomService.getByNamHocAndHocKy(namHoc, hocKy));
