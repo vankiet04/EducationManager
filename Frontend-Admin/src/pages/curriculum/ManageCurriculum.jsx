@@ -589,23 +589,6 @@ const ManageCurriculum = () => {
               </Option>
             ))}
           </Select>
-          <Button 
-            type="primary" 
-            icon={<PlusOutlined />}
-            onClick={() => {
-              setEditingId(null);
-              form.resetFields();
-              setIsModalVisible(true);
-            }}
-          >
-            Thêm nhóm kiến thức
-          </Button>
-          <Button 
-            icon={<ReloadOutlined />} 
-            onClick={fetchData}
-          >
-            Làm mới
-          </Button>
         </Space>
       </div>
 
