@@ -1,8 +1,7 @@
 // ManageLecturer.jsx - Trang quản lý giảng viên
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Dropdown, Menu, Tooltip, message } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  LockOutlined, UnlockOutlined, ReloadOutlined, EyeOutlined, EllipsisOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title } = Typography;
@@ -51,7 +50,7 @@ const ManageLecturer = () => {
     try {
       // Fetch lecturers from API
       const lecturersResponse = await axios.get('/giangvien');
-      const lecturersData = lecturersResponse.data;
+      const lecturersData = lecturersResponse.data.filter(lecturer => lecturer.trangThai === 1); // Only get active lecturers
       
       // Fetch users from API
       const usersResponse = await axios.get('/user');
@@ -115,17 +114,21 @@ const ManageLecturer = () => {
   // Handle deleting a lecturer
   const handleDelete = async (lecturerId) => {
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc chắn muốn xóa giảng viên này?',
+      title: 'Xác nhận xoá giảng viên',
+      content: 'Bạn có chắc chắn muốn xoá hóa giảng viên này? Giảng viên sẽ không còn hiển thị trong danh sách.',
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
       onOk: async () => {
         try {
           setLoading(true);
-          await axios.delete(`/giangvien/${lecturerId}`);
-          message.success('Xóa giảng viên thành công');
-          fetchLecturers(); // Refresh the list
+          const lecturer = lecturers.find(l => l.id === lecturerId);
+          const updatedLecturer = { ...lecturer, trangThai: 0 };
+          await axios.put(`/giangvien/${lecturerId}`, updatedLecturer);
+          message.success('Xoá hóa giảng viên thành công');
+          fetchLecturers();
         } catch (error) {
-          console.error('Error deleting lecturer:', error);
-          message.error('Không thể xóa giảng viên');
+          console.error('Error deactivating lecturer:', error);
+          message.error('Không thể xoá hóa giảng viên');
         } finally {
           setLoading(false);
         }
@@ -133,20 +136,16 @@ const ManageLecturer = () => {
     });
   };
 
-  // Handle toggling lecturer status
-  const handleToggleStatus = async (record) => {
+  // Handle assigning user to lecturer
+  const handleAssignUser = async (lecturerId, userId) => {
     try {
       setLoading(true);
-      const newStatus = record.trangThai === 1 ? 0 : 1;
-      
-      const updatedLecturer = { ...record, trangThai: newStatus };
-      await axios.put(`/giangvien/${record.id}`, updatedLecturer);
-      
-      message.success(`Giảng viên đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`);
+      await axios.post(`/giangvien/${lecturerId}/assign-user/${userId}`);
+      message.success('Gán tài khoản cho giảng viên thành công');
       fetchLecturers(); // Refresh the list
     } catch (error) {
-      console.error('Error updating lecturer status:', error);
-      message.error('Không thể cập nhật trạng thái giảng viên');
+      console.error('Error assigning user:', error);
+      message.error('Không thể gán tài khoản cho giảng viên');
     } finally {
       setLoading(false);
     }
@@ -166,7 +165,7 @@ const ManageLecturer = () => {
         trinhDo: values.trinhDo,
         chuyenMon: values.chuyenMon,
         userId: values.userId,
-        trangThai: values.trangThai || 1
+        trangThai: 1 // Always set to active
       };
       
       if (editingId) {
@@ -185,36 +184,6 @@ const ManageLecturer = () => {
     } catch (error) {
       console.error('Error submitting form:', error);
       message.error('Không thể lưu thông tin giảng viên');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle assigning user to lecturer
-  const handleAssignUser = async (lecturerId, userId) => {
-    try {
-      setLoading(true);
-      await axios.post(`/giangvien/${lecturerId}/assign-user/${userId}`);
-      message.success('Gán tài khoản cho giảng viên thành công');
-      fetchLecturers(); // Refresh the list
-    } catch (error) {
-      console.error('Error assigning user:', error);
-      message.error('Không thể gán tài khoản cho giảng viên');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  // Handle removing user from lecturer
-  const handleRemoveUser = async (lecturerId) => {
-    try {
-      setLoading(true);
-      await axios.delete(`/giangvien/${lecturerId}/remove-user`);
-      message.success('Hủy gán tài khoản thành công');
-      fetchLecturers(); // Refresh the list
-    } catch (error) {
-      console.error('Error removing user:', error);
-      message.error('Không thể hủy gán tài khoản');
     } finally {
       setLoading(false);
     }
@@ -256,14 +225,6 @@ const ManageLecturer = () => {
 
   // Define table columns
   const columns = [
-    {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 60,
-      fixed: 'left',
-      sorter: (a, b) => a.id - b.id,
-    },
     {
       title: 'Mã GV',
       dataIndex: 'maGiangVien',
@@ -366,25 +327,9 @@ const ManageLecturer = () => {
       ),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'trangThai',
-      key: 'trangThai',
-      width: 120,
-      filters: [
-        { text: 'Hoạt động', value: 1 },
-        { text: 'Vô hiệu hóa', value: 0 },
-      ],
-      onFilter: (value, record) => record.trangThai === value,
-      render: (trangThai) => (
-        <Tag color={trangThai === 1 ? 'green' : 'red'}>
-          {trangThai === 1 ? 'Hoạt động' : 'Vô hiệu hóa'}
-        </Tag>
-      ),
-    },
-    {
       title: 'Thao tác',
       key: 'action',
-      width: 250,
+      width: 160,
       fixed: 'right',
       render: (_, record) => (
         <Space size="small">
@@ -402,24 +347,9 @@ const ManageLecturer = () => {
             size="small"
             onClick={() => handleDelete(record.id)}
           >
-            Xóa
+            Xoá
           </Button>
-          <Button
-            type={record.trangThai === 1 ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trangThai === 1 ? 'Vô hiệu' : 'Kích hoạt'}
-          </Button>
-          {record.userId ? (
-            <Button
-              danger
-              size="small"
-              onClick={() => handleRemoveUser(record.id)}
-            >
-              Hủy gán TK
-            </Button>
-          ) : (
+          {!record.userId && (
             <Select
               style={{ width: 120 }}
               placeholder="Gán tài khoản"
@@ -436,6 +366,125 @@ const ManageLecturer = () => {
       ),
     },
   ];
+
+  // Update form to remove trangThai field
+  const renderForm = () => (
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+    >
+      <Form.Item
+        name="maGiangVien"
+        label="Mã giảng viên"
+        rules={[{ required: true, message: 'Vui lòng nhập mã giảng viên!' }]}
+      >
+        <Input 
+          disabled={!!editingId}
+          addonAfter={
+            !editingId && 
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={generateLecturerCode}
+              style={{ margin: -7 }}
+            >
+              Tạo mã
+            </Button>
+          }
+        />
+      </Form.Item>
+      
+      <Form.Item
+        name="hoTen"
+        label="Họ và tên"
+        rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="boMon"
+        label="Bộ môn"
+        rules={[{ required: true, message: 'Vui lòng nhập bộ môn!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="khoa"
+        label="Khoa"
+        rules={[{ required: true, message: 'Vui lòng nhập khoa!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="trinhDo"
+        label="Trình độ"
+        rules={[{ required: true, message: 'Vui lòng chọn trình độ!' }]}
+      >
+        <Select>
+          <Option value="">-- Chọn trình độ --</Option>
+          <Option value="Thạc sĩ">Thạc sĩ</Option>
+          <Option value="Tiến sĩ">Tiến sĩ</Option>
+          <Option value="Phó Giáo sư">Phó Giáo sư</Option>
+          <Option value="Giáo sư">Giáo sư</Option>
+        </Select>
+      </Form.Item>
+      
+      <Form.Item
+        name="chuyenMon"
+        label="Chuyên môn"
+        rules={[{ required: true, message: 'Vui lòng nhập chuyên môn!' }]}
+      >
+        <Input.TextArea placeholder="Các lĩnh vực chuyên môn, ngăn cách bằng dấu phẩy" />
+      </Form.Item>
+      
+      <Form.Item
+        name="userId"
+        label="Tài khoản người dùng"
+        rules={[{ required: true, message: 'Vui lòng chọn tài khoản!' }]}
+      >
+        <Select disabled={!!editingId}>
+          <Option value="">-- Chọn tài khoản --</Option>
+          {/* Show the currently assigned user when editing */}
+          {editingId && (
+            <Option value={form.getFieldValue('userId')}>
+              {availableUsers.find(u => u.id === form.getFieldValue('userId'))?.username || 'Unknown'}
+            </Option>
+          )}
+          {/* Show available users when adding new */}
+          {!editingId && availableUsers.map(user => (
+            <Option key={user.id} value={user.id}>
+              {user.username} - {user.hoTen} ({user.email})
+            </Option>
+          ))}
+        </Select>
+        {editingId && (
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+            Không thể thay đổi tài khoản đã liên kết với giảng viên
+          </div>
+        )}
+      </Form.Item>
+      
+      <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+        <Space>
+          <Button 
+            onClick={() => {
+              setIsModalVisible(false);
+              form.resetFields();
+            }}
+          >
+            Hủy
+          </Button>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            {editingId ? 'Cập nhật' : 'Thêm mới'}
+          </Button>
+        </Space>
+      </Form.Item>
+    </Form>
+  );
 
   return (
     <Card>
@@ -470,12 +519,6 @@ const ManageLecturer = () => {
           >
             Thêm giảng viên
           </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchLecturers}
-          >
-            Làm mới
-          </Button>
         </Space>
       </div>
 
@@ -486,7 +529,12 @@ const ManageLecturer = () => {
           rowKey="id" 
           loading={loading}
           scroll={{ x: 1500 }}
-          pagination={{ pageSize: 10 }}
+          pagination={{ 
+            pageSize: 10,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} giảng viên`,
+            showSizeChanger: true,
+            showQuickJumper: true
+          }}
         />
       </div>
       
@@ -518,132 +566,7 @@ const ManageLecturer = () => {
         maskClosable={false}
         width={600}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <Form.Item
-            name="maGiangVien"
-            label="Mã giảng viên"
-            rules={[{ required: true, message: 'Vui lòng nhập mã giảng viên!' }]}
-          >
-            <Input 
-              disabled={!!editingId}
-              addonAfter={
-                !editingId && 
-                <Button 
-                  type="link" 
-                  size="small" 
-                  onClick={generateLecturerCode}
-                  style={{ margin: -7 }}
-                >
-                  Tạo mã
-                </Button>
-              }
-            />
-          </Form.Item>
-          
-          <Form.Item
-            name="hoTen"
-            label="Họ và tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="boMon"
-            label="Bộ môn"
-            rules={[{ required: true, message: 'Vui lòng nhập bộ môn!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="khoa"
-            label="Khoa"
-            rules={[{ required: true, message: 'Vui lòng nhập khoa!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="trinhDo"
-            label="Trình độ"
-            rules={[{ required: true, message: 'Vui lòng chọn trình độ!' }]}
-          >
-            <Select>
-              <Option value="">-- Chọn trình độ --</Option>
-              <Option value="Thạc sĩ">Thạc sĩ</Option>
-              <Option value="Tiến sĩ">Tiến sĩ</Option>
-              <Option value="Phó Giáo sư">Phó Giáo sư</Option>
-              <Option value="Giáo sư">Giáo sư</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="chuyenMon"
-            label="Chuyên môn"
-            rules={[{ required: true, message: 'Vui lòng nhập chuyên môn!' }]}
-          >
-            <Input.TextArea placeholder="Các lĩnh vực chuyên môn, ngăn cách bằng dấu phẩy" />
-          </Form.Item>
-          
-          <Form.Item
-            name="userId"
-            label="Tài khoản người dùng"
-            rules={[{ required: true, message: 'Vui lòng chọn tài khoản!' }]}
-          >
-            <Select disabled={!!editingId}>
-              <Option value="">-- Chọn tài khoản --</Option>
-              {/* Show the currently assigned user when editing */}
-              {editingId && (
-                <Option value={form.getFieldValue('userId')}>
-                  {availableUsers.find(u => u.id === form.getFieldValue('userId'))?.username || 'Unknown'}
-                </Option>
-              )}
-              {/* Show available users when adding new */}
-              {!editingId && availableUsers.map(user => (
-                <Option key={user.id} value={user.id}>
-                  {user.username} - {user.hoTen} ({user.email})
-                </Option>
-              ))}
-            </Select>
-            {editingId && (
-              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                Không thể thay đổi tài khoản đã liên kết với giảng viên
-              </div>
-            )}
-          </Form.Item>
-          
-          <Form.Item
-            name="trangThai"
-            label="Trạng thái"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-          >
-            <Select>
-              <Option value={1}>Hoạt động</Option>
-              <Option value={0}>Vô hiệu hóa</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button 
-                onClick={() => {
-                  setIsModalVisible(false);
-                  form.resetFields();
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {editingId ? 'Cập nhật' : 'Thêm mới'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+        {renderForm()}
       </Modal>
     </Card>
   );
