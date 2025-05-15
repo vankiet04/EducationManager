@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, InputNumber, 
-  Tag, Tooltip, DatePicker, Divider } from 'antd';
+  Tag, Tooltip, DatePicker, Divider, Tree, Spin } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
   ReloadOutlined, InfoCircleOutlined, TeamOutlined } from '@ant-design/icons';
 import moment from 'moment';
@@ -9,6 +9,27 @@ import axios from 'axios';
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// API base URL
+const API_URL = 'http://localhost:8080/api';
+
+// Thiết lập cấu hình global cho axios
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+// Thêm interceptor để xử lý lỗi từ API
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
+    return Promise.reject(error);
+  }
+);
 
 const ManageCurriculum = () => {
   const [curriculumGroups, setCurriculumGroups] = useState([]);
@@ -21,6 +42,10 @@ const ManageCurriculum = () => {
   const [searchText, setSearchText] = useState('');
   const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [form] = Form.useForm();
+  const [detailsModalVisible, setDetailsModalVisible] = useState(false);
+  const [selectedRecord, setSelectedRecord] = useState(null);
+  const [detailsLoading, setDetailsLoading] = useState(false);
+  const [hierarchicalData, setHierarchicalData] = useState(null);
 
   // Mô phỏng dữ liệu khoa
   const mockDepartments = [
@@ -179,20 +204,17 @@ const ManageCurriculum = () => {
     fetchData();
   }, []);
 
-  // Fetch data from API or use mock data
+  // Fetch data from API
   const fetchData = async () => {
     setLoading(true);
     try {
-      // In a real application, these would be API calls
-      // const curriculumsResponse = await axios.get('/api/ctdt');
-      // const groupsResponse = await axios.get('/api/nhom-kien-thuc');
-      
-      // setCurriculums(curriculumsResponse.data);
-      // setCurriculumGroups(groupsResponse.data);
-      
-      // Using mock data for now
-      setCurriculums(mockCurriculums);
-      setCurriculumGroups(mockCurriculumGroups);
+      // Fetch curriculums
+      const curriculumsResponse = await axios.get('/khungchuongtrinh');
+      setCurriculums(curriculumsResponse.data);
+
+      // Fetch curriculum groups
+      const groupsResponse = await axios.get('/khungchuongtrinh-nhomkienthuc');
+      setCurriculumGroups(groupsResponse.data);
       setDepartments(mockDepartments);
       setMajors(mockMajors);
     } catch (error) {
@@ -223,15 +245,15 @@ const ManageCurriculum = () => {
     // Filter by search text
     if (searchText) {
       filteredData = filteredData.filter(item => 
-        item.ma_nhom.toLowerCase().includes(searchText.toLowerCase()) ||
-        item.ten_nhom.toLowerCase().includes(searchText.toLowerCase())
+        item.idMaNhom.toString().toLowerCase().includes(searchText.toLowerCase()) ||
+        item.idKhungChuongTrinh.toString().toLowerCase().includes(searchText.toLowerCase())
       );
     }
     
     // Filter by curriculum
     if (curriculumFilter !== 'all') {
       const ctdtId = parseInt(curriculumFilter);
-      filteredData = filteredData.filter(item => item.ctdt_id === ctdtId);
+      filteredData = filteredData.filter(item => item.idKhungChuongTrinh === ctdtId);
     }
     
     return filteredData;
@@ -349,6 +371,60 @@ const ManageCurriculum = () => {
     }
   };
 
+  // Fetch hierarchical data for a curriculum
+  const fetchHierarchicalData = async (record) => {
+    setDetailsLoading(true);
+    try {
+      // Get curriculum details
+      const curriculumResponse = await axios.get(`/khungchuongtrinh/${record.idKhungChuongTrinh}`);
+      const curriculum = curriculumResponse.data;
+
+      // Get knowledge groups for this curriculum
+      const knowledgeGroupsResponse = await axios.get(`/khungchuongtrinh-nhomkienthuc/khungchuongtrinh/${record.idKhungChuongTrinh}`);
+      const knowledgeGroups = knowledgeGroupsResponse.data;
+
+      // Get all knowledge groups details
+      const nhomKienThucResponse = await axios.get('/nhomkienthuc');
+      const nhomKienThucList = nhomKienThucResponse.data;
+
+      // Get all courses
+      const coursesResponse = await axios.get('/hocphan');
+      const courses = coursesResponse.data;
+
+      // Build hierarchical data
+      const hierarchicalData = {
+        curriculum: curriculum,
+        groups: await Promise.all(knowledgeGroups.map(async (group) => {
+          const nhomKienThuc = nhomKienThucList.find(n => n.id === group.idMaNhom);
+          const groupCourses = courses.filter(course => course.nhomKienThucID === group.idMaNhom);
+          
+          return {
+            ...group,
+            nhomKienThuc,
+            courses: groupCourses
+          };
+        }))
+      };
+
+      setHierarchicalData(hierarchicalData);
+    } catch (error) {
+      console.error('Error fetching hierarchical data:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể tải dữ liệu chi tiết. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setDetailsLoading(false);
+    }
+  };
+
+  // Handle viewing details
+  const handleViewDetails = async (record) => {
+    setSelectedRecord(record);
+    setDetailsModalVisible(true);
+    await fetchHierarchicalData(record);
+  };
+
   // Table columns
   const columns = [
     {
@@ -360,90 +436,133 @@ const ManageCurriculum = () => {
     },
     {
       title: 'Chương trình đào tạo',
-      dataIndex: 'ten_ctdt',
-      key: 'ten_ctdt',
+      dataIndex: 'idKhungChuongTrinh',
+      key: 'idKhungChuongTrinh',
       width: 250,
       ellipsis: true,
-      sorter: (a, b) => a.ten_ctdt.localeCompare(b.ten_ctdt),
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
+      sorter: (a, b) => a.idKhungChuongTrinh - b.idKhungChuongTrinh,
+      render: (id) => {
+        const curriculum = curriculums.find(c => c.id === id);
+        const text = curriculum ? curriculum.ten_nhom : 'N/A';
+        return (
+          <Tooltip placement="topLeft" title={text}>
+            {text}
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Mã nhóm',
-      dataIndex: 'ma_nhom',
-      key: 'ma_nhom',
+      dataIndex: 'idMaNhom',
+      key: 'idMaNhom',
       width: 120,
-      sorter: (a, b) => a.ma_nhom.localeCompare(b.ma_nhom),
+      sorter: (a, b) => a.idMaNhom - b.idMaNhom,
     },
     {
-      title: 'Tên nhóm kiến thức',
-      dataIndex: 'ten_nhom',
-      key: 'ten_nhom',
-      width: 250,
-      ellipsis: true,
-      sorter: (a, b) => a.ten_nhom.localeCompare(b.ten_nhom),
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Số tín chỉ tối thiểu',
-      dataIndex: 'so_tin_chi_toi_thieu',
-      key: 'so_tin_chi_toi_thieu',
+      title: 'Số tín chỉ bắt buộc',
+      dataIndex: 'soTinChiBatBuoc',
+      key: 'soTinChiBatBuoc',
       width: 150,
       align: 'center',
-      sorter: (a, b) => a.so_tin_chi_toi_thieu - b.so_tin_chi_toi_thieu,
+      sorter: (a, b) => a.soTinChiBatBuoc - b.soTinChiBatBuoc,
+    },
+    {
+      title: 'Số tín chỉ tự chọn',
+      dataIndex: 'soTinChiTuChon',
+      key: 'soTinChiTuChon',
+      width: 150,
+      align: 'center',
+      sorter: (a, b) => a.soTinChiTuChon - b.soTinChiTuChon,
     },
     {
       title: 'Thao tác',
       key: 'action',
-      width: 180,
+      width: 100,
       render: (_, record) => (
         <Space size="small">
-          <Button 
-            type="primary" 
-            icon={<EditOutlined />}
-            size="small"
-            onClick={() => handleEdit(record)}
-          >
-            Sửa
-          </Button>
-          <Button 
-            danger 
-            icon={<DeleteOutlined />}
-            size="small"
-            onClick={() => handleDelete(record.id)}
-          >
-            Xóa
-          </Button>
           <Button
             icon={<InfoCircleOutlined />}
             size="small"
-            onClick={() => {
-              Modal.info({
-                title: `Chi tiết nhóm kiến thức: ${record.ten_nhom}`,
-                content: (
-                  <div>
-                    <p><strong>ID:</strong> {record.id}</p>
-                    <p><strong>Chương trình đào tạo:</strong> {record.ten_ctdt}</p>
-                    <p><strong>Mã nhóm:</strong> {record.ma_nhom}</p>
-                    <p><strong>Tên nhóm:</strong> {record.ten_nhom}</p>
-                    <p><strong>Số tín chỉ tối thiểu:</strong> {record.so_tin_chi_toi_thieu}</p>
-                  </div>
-                ),
-                width: 500,
-              });
-            }}
-          />
+            onClick={() => handleViewDetails(record)}
+          >
+            Chi tiết
+          </Button>
         </Space>
       ),
     },
   ];
+
+  // Render hierarchical details
+  const renderHierarchicalDetails = () => {
+    if (!hierarchicalData) return null;
+
+    return (
+      <div style={{ maxHeight: '60vh', overflowY: 'auto' }}>
+        <div style={{ marginBottom: 16 }}>
+          <h3>Thông tin khung chương trình</h3>
+          <p><strong>Mã khung:</strong> {hierarchicalData.curriculum.ma_nhom}</p>
+          <p><strong>Tên khung:</strong> {hierarchicalData.curriculum.ten_nhom}</p>
+          <p><strong>Số tín chỉ tối thiểu:</strong> {hierarchicalData.curriculum.soTinChiToiThieu}</p>
+        </div>
+
+        <div>
+          <h3>Nhóm kiến thức và học phần</h3>
+          {hierarchicalData.groups.map(group => (
+            <div key={group.id} style={{ marginBottom: 24, backgroundColor: '#f5f5f5', padding: 16, borderRadius: 8 }}>
+              <h4>
+                {group.nhomKienThuc?.tenNhom || 'N/A'} 
+                <span style={{ marginLeft: 8, fontSize: '0.9em', color: '#666' }}>
+                  (Mã nhóm: {group.nhomKienThuc?.maNhom})
+                </span>
+              </h4>
+              <p>
+                <strong>Số tín chỉ bắt buộc:</strong> {group.soTinChiBatBuoc} | 
+                <strong> Số tín chỉ tự chọn:</strong> {group.soTinChiTuChon}
+              </p>
+              
+              <Table
+                size="small"
+                dataSource={group.courses}
+                rowKey="id"
+                pagination={false}
+                style={{ marginTop: 8 }}
+                columns={[
+                  {
+                    title: 'Mã HP',
+                    dataIndex: 'maHp',
+                    width: 100,
+                  },
+                  {
+                    title: 'Tên học phần',
+                    dataIndex: 'tenHp',
+                    ellipsis: true,
+                  },
+                  {
+                    title: 'Số TC',
+                    dataIndex: 'soTinChi',
+                    width: 80,
+                    align: 'center',
+                  },
+                  {
+                    title: 'LT',
+                    dataIndex: 'soTietLyThuyet',
+                    width: 70,
+                    align: 'center',
+                  },
+                  {
+                    title: 'TH',
+                    dataIndex: 'soTietThucHanh',
+                    width: 70,
+                    align: 'center',
+                  }
+                ]}
+              />
+            </div>
+          ))}
+        </div>
+      </div>
+    );
+  };
 
   return (
     <Card>
@@ -465,8 +584,8 @@ const ManageCurriculum = () => {
           >
             <Option value="all">Tất cả chương trình đào tạo</Option>
             {curriculums.map(curriculum => (
-              <Option key={curriculum.id} value={curriculum.id.toString()}>
-                {curriculum.ten_ctdt}
+              <Option key={curriculum.id} value={curriculum.id}>
+                {curriculum.ten_nhom}
               </Option>
             ))}
           </Select>
@@ -533,7 +652,7 @@ const ManageCurriculum = () => {
             >
               {curriculums.map(curriculum => (
                 <Option key={curriculum.id} value={curriculum.id}>
-                  {curriculum.ten_ctdt}
+                  {curriculum.ten_nhom}
                 </Option>
               ))}
             </Select>
@@ -587,6 +706,33 @@ const ManageCurriculum = () => {
             </Space>
           </Form.Item>
         </Form>
+      </Modal>
+
+      <Modal
+        title="Chi tiết khung chương trình"
+        open={detailsModalVisible}
+        onCancel={() => {
+          setDetailsModalVisible(false);
+          setHierarchicalData(null);
+        }}
+        footer={[
+          <Button key="close" onClick={() => {
+            setDetailsModalVisible(false);
+            setHierarchicalData(null);
+          }}>
+            Đóng
+          </Button>
+        ]}
+        width={800}
+      >
+        {detailsLoading ? (
+          <div style={{ textAlign: 'center', padding: '20px' }}>
+            <Spin size="large" />
+            <p style={{ marginTop: 16 }}>Đang tải dữ liệu...</p>
+          </div>
+        ) : (
+          renderHierarchicalDetails()
+        )}
       </Modal>
     </Card>
   );
