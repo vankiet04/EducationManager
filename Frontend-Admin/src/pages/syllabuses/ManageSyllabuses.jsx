@@ -47,6 +47,7 @@ const ManageSyllabuses = () => {
   const [fileList, setFileList] = useState([]);
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [form] = Form.useForm();
+  const [pagination, setPagination] = useState({ current: 1 });
   
   // Load data when component mounts
   useEffect(() => {
@@ -455,48 +456,6 @@ const ManageSyllabuses = () => {
       ),
     },
     {
-      title: 'Phương pháp giảng dạy',
-      dataIndex: 'phuongPhapGiangDay',
-      key: 'phuongPhapGiangDay',
-      width: 200,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Phương pháp đánh giá',
-      dataIndex: 'phuongPhapDanhGia',
-      key: 'phuongPhapDanhGia',
-      width: 200,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
-    },
-    {
-      title: 'Tài liệu tham khảo',
-      dataIndex: 'taiLieuThamKhao',
-      key: 'taiLieuThamKhao',
-      width: 200,
-      ellipsis: {
-        showTitle: false,
-      },
-      render: (text) => (
-        <Tooltip placement="topLeft" title={text}>
-          {text}
-        </Tooltip>
-      ),
-    },
-    {
       title: 'Thao tác',
       key: 'action',
       width: 250,
@@ -648,6 +607,16 @@ const ManageSyllabuses = () => {
     handleGradeColumnsSubmit(syllabusId, selectedGradeColumns);
   };
 
+  // Xử lý reset và làm mới dữ liệu
+  const handleResetFilters = () => {
+    setSearchText('');
+    setPagination(prev => ({
+      ...prev,
+      current: 1
+    }));
+    fetchData(); // Fetch data after resetting filters
+  };
+
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '16px' }}>
@@ -656,20 +625,11 @@ const ManageSyllabuses = () => {
           <Input
             placeholder="Tìm kiếm..."
             prefix={<SearchOutlined />}
-            style={{ width: 200 }}
+            style={{ width: 220 }}
+            value={searchText}
             onChange={handleSearch}
             allowClear
           />
-          <Select
-            placeholder="Trạng thái"
-            style={{ width: 150 }}
-            value={statusFilter}
-            onChange={handleStatusFilter}
-          >
-            <Option value="all">Tất cả</Option>
-            <Option value="1">Đã phê duyệt</Option>
-            <Option value="0">Chờ phê duyệt</Option>
-          </Select>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
@@ -683,8 +643,8 @@ const ManageSyllabuses = () => {
             Thêm đề cương
           </Button>
           <Button 
-            icon={<ReloadOutlined />}
-            onClick={fetchData}
+            icon={<ReloadOutlined />} 
+            onClick={handleResetFilters}
           >
             Làm mới
           </Button>
@@ -723,14 +683,34 @@ const ManageSyllabuses = () => {
       `}</style>
 
       <Modal
-        title={editingRecord ? "Cập nhật đề cương chi tiết" : "Thêm đề cương chi tiết mới"}
+        title={editingRecord ? "Chi tiết đề cương" : "Thêm đề cương chi tiết mới"}
         open={detailsModalVisible}
         onCancel={() => {
           setDetailsModalVisible(false);
           form.resetFields();
           setFileList([]);
         }}
-        footer={null}
+        footer={editingRecord ? null : (
+          <Space>
+            <Button
+              onClick={() => {
+                setDetailsModalVisible(false);
+                form.resetFields();
+                setFileList([]);
+              }}
+            >
+              Hủy
+            </Button>
+            <Button 
+              type="primary" 
+              onClick={form.submit}
+              loading={loading}
+              icon={<FileTextOutlined />}
+            >
+              Thêm đề cương
+            </Button>
+          </Space>
+        )}
         width={800}
       >
         <Form
@@ -764,7 +744,7 @@ const ManageSyllabuses = () => {
                 label="Mục tiêu học phần"
                 rules={[{ required: true, message: 'Vui lòng nhập mục tiêu học phần!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập mục tiêu của học phần" />
+                <TextArea rows={3} placeholder="Nhập mục tiêu của học phần" disabled={!!editingRecord} />
               </Form.Item>
 
               <Form.Item
@@ -772,7 +752,7 @@ const ManageSyllabuses = () => {
                 label="Nội dung"
                 rules={[{ required: true, message: 'Vui lòng nhập nội dung học phần!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập nội dung chi tiết của học phần" />
+                <TextArea rows={3} placeholder="Nhập nội dung chi tiết của học phần" disabled={!!editingRecord} />
               </Form.Item>
             </TabPane>
 
@@ -782,7 +762,7 @@ const ManageSyllabuses = () => {
                 label="Phương pháp giảng dạy"
                 rules={[{ required: true, message: 'Vui lòng nhập phương pháp giảng dạy!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập phương pháp giảng dạy của học phần" />
+                <TextArea rows={3} placeholder="Nhập phương pháp giảng dạy của học phần" disabled={!!editingRecord} />
               </Form.Item>
 
               <Form.Item
@@ -790,7 +770,7 @@ const ManageSyllabuses = () => {
                 label="Phương pháp đánh giá"
                 rules={[{ required: true, message: 'Vui lòng nhập phương pháp đánh giá!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập phương pháp đánh giá của học phần" />
+                <TextArea rows={3} placeholder="Nhập phương pháp đánh giá của học phần" disabled={!!editingRecord} />
               </Form.Item>
 
               <Form.Item
@@ -798,7 +778,7 @@ const ManageSyllabuses = () => {
                 label="Tài liệu tham khảo"
                 rules={[{ required: true, message: 'Vui lòng nhập tài liệu tham khảo!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập danh sách tài liệu tham khảo" />
+                <TextArea rows={3} placeholder="Nhập danh sách tài liệu tham khảo" disabled={!!editingRecord} />
               </Form.Item>
 
               {/* Hidden field for status */}
@@ -813,46 +793,30 @@ const ManageSyllabuses = () => {
 
             <TabPane tab="Cột điểm" key="3">
               <div style={{ marginBottom: 16 }}>
-                <Title level={5}>Chọn cột điểm cho đề cương (tổng tỷ lệ phải 100%)</Title>
+                <Title level={5}>Cột điểm của đề cương</Title>
                 <div style={{ 
                   padding: '8px 16px',
-                  background: totalPercentage === 100 ? '#f6ffed' : '#fff2f0',
-                  border: `1px solid ${totalPercentage === 100 ? '#b7eb8f' : '#ffccc7'}`,
+                  background: '#f6ffed',
+                  border: '1px solid #b7eb8f',
                   borderRadius: '4px',
                   marginBottom: '16px'
                 }}>
                   <Text strong>
-                    Tổng tỷ lệ hiện tại: 
-                    <span style={{ color: totalPercentage === 100 ? '#52c41a' : '#f5222d', marginLeft: 8 }}>
+                    Tổng tỷ lệ: 
+                    <span style={{ color: '#52c41a', marginLeft: 8 }}>
                       {totalPercentage}%
                     </span>
                   </Text>
-                  {totalPercentage !== 100 && (
-                    <div style={{ marginTop: 8 }}>
-                      <Text type="danger">Tổng tỷ lệ phải bằng đúng 100% để đảm bảo đánh giá toàn diện!</Text>
-                    </div>
-                  )}
                 </div>
 
                 <Form.Item
                   name="cotDiem"
-                  rules={[
-                    { required: true, message: 'Vui lòng chọn ít nhất một cột điểm!' },
-                    {
-                      validator: async () => {
-                        if (Math.abs(totalPercentage - 100) > 0.01) {
-                          return Promise.reject('Tổng tỷ lệ phải bằng 100%!');
-                        }
-                        return Promise.resolve();
-                      }
-                    }
-                  ]}
                 >
-                  <Checkbox.Group style={{ width: '100%' }} onChange={handleGradeColumnChange}>
+                  <Checkbox.Group style={{ width: '100%' }} disabled={!!editingRecord}>
                     <Row gutter={[16, 16]}>
                       {gradeColumns.map(column => (
                         <Col span={12} key={column.id}>
-                          <Checkbox value={column.id}>
+                          <Checkbox value={column.id} disabled={!!editingRecord}>
                             <Space direction="vertical" size={0}>
                               <Text strong>{column.tenCotDiem}</Text>
                               <Text type="secondary">Tỷ lệ: {column.tyLePhanTram}% - Hình thức: {column.hinhThuc}</Text>
@@ -881,37 +845,14 @@ const ManageSyllabuses = () => {
                     return isPDF || Upload.LIST_IGNORE;
                   }}
                   maxCount={1}
+                  disabled={!!editingRecord}
                 >
-                  <Button icon={<UploadOutlined />}>Tải lên file PDF</Button>
+                  <Button icon={<UploadOutlined />} disabled={!!editingRecord}>Tải lên file PDF</Button>
                 </Upload>
               </Form.Item>
               <p>Lưu ý: File đề cương phải được định dạng PDF và có dung lượng tối đa 10MB.</p>
             </TabPane>
           </Tabs>
-
-          <Divider />
-
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button
-                onClick={() => {
-                  setDetailsModalVisible(false);
-                  form.resetFields();
-                  setFileList([]);
-                }}
-              >
-                Hủy
-              </Button>
-              <Button 
-                type="primary" 
-                htmlType="submit" 
-                loading={loading}
-                icon={<FileTextOutlined />}
-              >
-                {editingRecord ? 'Cập nhật đề cương' : 'Thêm đề cương'}
-              </Button>
-            </Space>
-          </Form.Item>
         </Form>
       </Modal>
     </Card>

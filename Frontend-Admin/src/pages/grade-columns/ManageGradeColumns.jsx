@@ -175,6 +175,12 @@ const ManageGradeColumns = () => {
     }
   };
 
+  // Xử lý reset và làm mới dữ liệu
+  const handleRefresh = () => {
+    setSearchText(''); // Clear search text
+    fetchData(); // Reload data
+  };
+
   // Định nghĩa các cột trong bảng
   const columns = [
     {
@@ -277,6 +283,7 @@ const ManageGradeColumns = () => {
             placeholder="Tìm kiếm..."
             prefix={<SearchOutlined />}
             style={{ width: 200 }}
+            value={searchText}
             onChange={handleSearch}
             allowClear
           />
@@ -296,7 +303,7 @@ const ManageGradeColumns = () => {
           </Button>
           <Button 
             icon={<ReloadOutlined />} 
-            onClick={fetchData}
+            onClick={handleRefresh}
           >
             Làm mới
           </Button>

@@ -52,10 +52,11 @@ const ManageGeneralInfo = () => {
       const response = await axios.get('http://localhost:8080/api/thongTinChung');
       let filteredData = response.data;
       
-      // Lọc theo từ khóa tìm kiếm (chỉ tìm theo tên chương trình)
+      // Lọc theo từ khóa tìm kiếm (tìm theo tên và mã chương trình)
       if (searchText) {
         filteredData = filteredData.filter(item => 
-          item.tenCtdt.toLowerCase().includes(searchText.toLowerCase())
+          item.tenCtdt.toLowerCase().includes(searchText.toLowerCase()) ||
+          item.maCtdt.toLowerCase().includes(searchText.toLowerCase())
         );
       }
       
@@ -155,8 +156,16 @@ const ManageGeneralInfo = () => {
   const handleEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
-      ...record,
-      namBanHanh: record.namBanHanh ? moment(record.namBanHanh) : null,
+      maCtdt: record.maCtdt,
+      tenCtdt: record.tenCtdt,
+      nganh: record.nganh,
+      maNganh: record.maNganh,
+      khoaQuanLy: record.khoaQuanLy,
+      heDaoTao: record.heDaoTao,
+      trinhDo: record.trinhDo,
+      tongTinChi: record.tongTinChi,
+      namBanHanh: record.namBanHanh,
+      thoiGianDaoTao: record.thoiGianDaoTao
     });
     setIsModalVisible(true);
   };
@@ -169,7 +178,10 @@ const ManageGeneralInfo = () => {
       onOk: async () => {
         setLoading(true);
         try {
-          await axios.delete(`http://localhost:8080/api/thongTinChung/${id}`);
+          // Thay vì xóa, cập nhật trạng thái về 0
+          await axios.put(`http://localhost:8080/api/thongTinChung/${id}`, {
+            trangThai: 0
+          });
           message.success('Xóa thông tin thành công');
           fetchData();
         } catch (error) {
@@ -182,65 +194,42 @@ const ManageGeneralInfo = () => {
     });
   };
 
-  // Xử lý submit form
-  const handleSubmit = (values) => {
+  // Handle form submission
+  const handleSubmit = async (values) => {
     setLoading(true);
-    
-    if (editingId) {
-      // Cập nhật thông tin
-      setTimeout(() => {
-        // Cập nhật mockGeneralInfos
-        const index = generalInfos.findIndex(info => info.id === editingId);
-        if (index !== -1) {
-          const updatedInfo = { ...generalInfos[index], ...values };
-          const updatedInfos = [
-            ...generalInfos.slice(0, index),
-            updatedInfo,
-            ...generalInfos.slice(index + 1)
-          ];
-          setGeneralInfos(updatedInfos);
-        }
-        
-        // Refresh dữ liệu
-        fetchData();
-        
-        setIsModalVisible(false);
-        form.resetFields();
-        Modal.success({
-          content: 'Cập nhật thông tin thành công'
-        });
-      }, 500);
-    } else {
-      // Kiểm tra trùng mã chương trình đào tạo
-      const exists = generalInfos.some(info => info.maCtdt === values.maCtdt);
-      if (exists) {
-        Modal.error({
-          content: 'Mã chương trình đào tạo đã tồn tại!'
-        });
-        setLoading(false);
-        return;
+    try {
+      const formData = {
+        maCtdt: values.maCtdt,
+        tenCtdt: values.tenCtdt,
+        nganh: values.nganh,
+        maNganh: values.maNganh,
+        khoaQuanLy: values.khoaQuanLy,
+        heDaoTao: values.heDaoTao,
+        trinhDo: values.trinhDo,
+        tongTinChi: values.tongTinChi,
+        namBanHanh: values.namBanHanh,
+        thoiGianDaoTao: values.thoiGianDaoTao,
+        trangThai: 1 // Set status to active by default
+      };
+
+      if (editingId) {
+        // Update existing record
+        await axios.put(`http://localhost:8080/api/thongTinChung/${editingId}`, formData);
+        message.success('Cập nhật chương trình đào tạo thành công');
+      } else {
+        // Add new record
+        await axios.post('http://localhost:8080/api/thongTinChung', formData);
+        message.success('Thêm chương trình đào tạo mới thành công');
       }
-      
-      // Thêm thông tin mới
-      setTimeout(() => {
-        const newId = Math.max(...generalInfos.map(info => info.id), 0) + 1;
-        const newItem = {
-          id: newId,
-          ...values
-        };
-        
-        // Cập nhật generalInfos
-        setGeneralInfos(prev => [...prev, newItem]);
-        
-        // Refresh dữ liệu
-        fetchData();
-        
-        setIsModalVisible(false);
-        form.resetFields();
-        Modal.success({
-          content: 'Thêm thông tin mới thành công'
-        });
-      }, 500);
+
+      setIsModalVisible(false);
+      form.resetFields();
+      fetchData();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      message.error('Có lỗi xảy ra khi lưu chương trình đào tạo');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -393,7 +382,7 @@ const ManageGeneralInfo = () => {
         <Title level={2}>Quản lý CTĐT</Title>
         <Space wrap>
           <Input
-            placeholder="Tìm kiếm theo tên chương trình..."
+            placeholder="Tìm kiếm theo tên hoặc mã chương trình..."
             prefix={<SearchOutlined />}
             style={{ width: 300 }}
             value={searchText}
@@ -406,10 +395,6 @@ const ManageGeneralInfo = () => {
             onClick={() => {
               setEditingId(null);
               form.resetFields();
-              form.setFieldsValue({
-                heDaoTao: 'Chính quy',
-                trinhDo: 'Đại học',
-              });
               setIsModalVisible(true);
             }}
           >
@@ -454,43 +439,35 @@ const ManageGeneralInfo = () => {
           layout="vertical"
           onFinish={handleSubmit}
         >
-          <Row gutter={[24, 0]}>
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="maCtdt"
-                label="Mã chương trình đào tạo"
-                rules={[{ required: true, message: 'Vui lòng nhập mã chương trình đào tạo!' }]}
+                label="Mã CTDT"
+                rules={[{ required: true, message: 'Vui lòng nhập mã CTDT!' }]}
               >
-                <Input disabled={!!editingId} prefix={<BookOutlined />} />
+                <Input disabled={!!editingId} />
               </Form.Item>
             </Col>
             <Col span={12}>
               <Form.Item
-                name="namBanHanh"
-                label="Năm ban hành"
-                rules={[{ required: true, message: 'Vui lòng nhập năm ban hành!' }]}
+                name="tenCtdt"
+                label="Tên CTDT"
+                rules={[{ required: true, message: 'Vui lòng nhập tên CTDT!' }]}
               >
-                <InputNumber style={{ width: '100%' }} min={2000} max={2100} />
+                <Input />
               </Form.Item>
             </Col>
           </Row>
-          
-          <Form.Item
-            name="tenCtdt"
-            label="Tên chương trình đào tạo"
-            rules={[{ required: true, message: 'Vui lòng nhập tên chương trình đào tạo!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Row gutter={[24, 0]}>
+
+          <Row gutter={16}>
             <Col span={12}>
               <Form.Item
                 name="nganh"
                 label="Ngành"
                 rules={[{ required: true, message: 'Vui lòng nhập ngành!' }]}
               >
-                <Input />
+                <Input disabled={!!editingId} />
               </Form.Item>
             </Col>
             <Col span={12}>
@@ -499,21 +476,22 @@ const ManageGeneralInfo = () => {
                 label="Mã ngành"
                 rules={[{ required: true, message: 'Vui lòng nhập mã ngành!' }]}
               >
-                <Input />
+                <Input disabled={!!editingId} />
               </Form.Item>
             </Col>
           </Row>
-          
-          <Form.Item
-            name="khoaQuanLy"
-            label="Khoa quản lý"
-            rules={[{ required: true, message: 'Vui lòng nhập khoa quản lý!' }]}
-          >
-            <Input prefix={<ApartmentOutlined />} />
-          </Form.Item>
-          
-          <Row gutter={[24, 0]}>
-            <Col span={8}>
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="khoaQuanLy"
+                label="Khoa quản lý"
+                rules={[{ required: true, message: 'Vui lòng nhập khoa quản lý!' }]}
+              >
+                <Input disabled={!!editingId} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
               <Form.Item
                 name="heDaoTao"
                 label="Hệ đào tạo"
@@ -521,12 +499,15 @@ const ManageGeneralInfo = () => {
               >
                 <Select>
                   <Option value="Chính quy">Chính quy</Option>
-                  <Option value="Liên thông">Liên thông</Option>
+                  <Option value="Vừa làm vừa học">Vừa làm vừa học</Option>
                   <Option value="Từ xa">Từ xa</Option>
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+          </Row>
+
+          <Row gutter={16}>
+            <Col span={12}>
               <Form.Item
                 name="trinhDo"
                 label="Trình độ"
@@ -540,17 +521,43 @@ const ManageGeneralInfo = () => {
                 </Select>
               </Form.Item>
             </Col>
-            <Col span={8}>
+            <Col span={12}>
               <Form.Item
                 name="tongTinChi"
                 label="Tổng tín chỉ"
-                rules={[{ required: true, message: 'Vui lòng nhập tổng số tín chỉ!' }]}
+                rules={[{ required: true, message: 'Vui lòng nhập tổng tín chỉ!' }]}
               >
-                <InputNumber style={{ width: '100%' }} min={1} max={300} prefix={<NumberOutlined />} />
+                <InputNumber style={{ width: '100%' }} min={0} />
               </Form.Item>
             </Col>
           </Row>
-          
+
+          <Row gutter={16}>
+            <Col span={12}>
+              <Form.Item
+                name="namBanHanh"
+                label="Năm ban hành"
+                rules={[{ required: true, message: 'Vui lòng nhập năm ban hành!' }]}
+              >
+                <InputNumber style={{ width: '100%' }} min={2000} max={new Date().getFullYear()} />
+              </Form.Item>
+            </Col>
+            <Col span={12}>
+              <Form.Item
+                name="thoiGianDaoTao"
+                label="Thời gian đào tạo"
+                rules={[{ required: true, message: 'Vui lòng nhập thời gian đào tạo!' }]}
+              >
+                <InputNumber 
+                  style={{ width: '100%' }} 
+                  min={1} 
+                  max={10}
+                  addonAfter="năm"
+                />
+              </Form.Item>
+            </Col>
+          </Row>
+
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button
@@ -564,7 +571,6 @@ const ManageGeneralInfo = () => {
               <Button 
                 type="primary" 
                 htmlType="submit" 
-                icon={<SaveOutlined />} 
                 loading={loading}
               >
                 {editingId ? 'Cập nhật' : 'Thêm mới'}
