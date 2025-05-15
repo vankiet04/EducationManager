@@ -280,27 +280,18 @@ const ManageSyllabuses = () => {
   // Handle form submission
   const handleSubmit = async (values) => {
     setLoading(true);
-    
-    // Kiểm tra tổng tỷ lệ phần trăm phải bằng 100%
-    if (Math.abs(totalPercentage - 100) > 0.01) {
-      message.error('Tổng tỷ lệ phần trăm của các cột điểm phải bằng 100%!');
-      setLoading(false);
-      return;
-    }
-    
     try {
-      let response;
       const syllabusData = {
-        id: editingRecord || null,
         hocPhanId: values.hocPhanId,
         mucTieu: values.mucTieu,
         noiDung: values.noiDung,
         phuongPhapGiangDay: values.phuongPhapGiangDay,
         phuongPhapDanhGia: values.phuongPhapDanhGia,
         taiLieuThamKhao: values.taiLieuThamKhao,
-        trangThai: values.trangThai || 0
+        trangThai: 0 // Set initial status to 0 (pending)
       };
-      
+
+      let response;
       if (editingRecord) {
         // Update existing syllabus
         response = await axios.put(`${API_URL}/decuongchitiet/${editingRecord}`, syllabusData);
@@ -335,20 +326,9 @@ const ManageSyllabuses = () => {
         
         setSyllabuses(updatedSyllabuses);
       } else {
-        // Create new syllabus
+        // Create new syllabus without grade columns
         response = await axios.post(`${API_URL}/decuongchitiet`, syllabusData);
         const newSyllabus = response.data;
-        
-        // Create cột điểm for new syllabus
-        for (const column of selectedGradeColumns) {
-          const gradeColumnData = {
-            decuongId: newSyllabus.id,
-            tenCotDiem: column.tenCotDiem,
-            tyLePhanTram: column.tyLePhanTram,
-            hinhThuc: column.hinhThuc
-          };
-          await axios.post(`${API_URL}/cotdiem`, gradeColumnData);
-        }
         
         message.success('Thêm đề cương mới thành công, đang chờ phê duyệt');
         
@@ -883,18 +863,6 @@ const ManageSyllabuses = () => {
                     </Row>
                   </Checkbox.Group>
                 </Form.Item>
-                
-                <Divider orientation="left">Thêm cột điểm mới</Divider>
-                <Button 
-                  type="primary" 
-                  icon={<PlusOutlined />}
-                  onClick={() => {
-                    // Redirect to cột điểm management
-                    window.open('/grade-columns', '_blank');
-                  }}
-                >
-                  Thêm cột điểm mới
-                </Button>
               </div>
             </TabPane>
 

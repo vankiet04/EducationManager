@@ -90,7 +90,7 @@ public class DecuongChiTietService {
     public boolean delete(Integer id) {
         return decuongRepository.findByIdAndTrangThaiNot(id, -1)
                 .map(decuong -> {
-                    decuong.setTrangThai(-1); // Đánh dấu là đã xóa
+                    decuong.setTrangThai(0); // Set status to 0 (inactive) instead of -1
                     decuongRepository.save(decuong);
                     return true;
                 })

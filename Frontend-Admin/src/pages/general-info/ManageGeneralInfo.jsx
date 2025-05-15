@@ -7,6 +7,7 @@ import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined,
   BookOutlined, ApartmentOutlined, FieldTimeOutlined, NumberOutlined,
   FilterOutlined, SortAscendingOutlined, EyeOutlined, EllipsisOutlined } from '@ant-design/icons';
 import moment from 'moment';
+import axios from 'axios';
 
 const { Title, Text, Paragraph } = Typography;
 const { Option } = Select;
@@ -39,113 +40,29 @@ const ManageGeneralInfo = () => {
   });
   const [yearFilter, setYearFilter] = useState('all');
 
-  // Mô phỏng dữ liệu thông tin chung
-  const mockGeneralInfos = [
-    {
-      id: 1,
-      ma_ctdt: 'CNTT2020',
-      ten_ctdt: 'Chương trình đào tạo ngành Công nghệ thông tin',
-      nganh: 'Công nghệ thông tin',
-      ma_nganh: '7480201',
-      khoa_quan_ly: 'Khoa Công nghệ thông tin',
-      he_dao_tao: 'Chính quy',
-      trinh_do: 'Đại học',
-      tong_tin_chi: 145,
-      thoi_gian_dao_tao: '4 năm',
-      nam_ban_hanh: 2020,
-      trang_thai: 1
-    },
-    {
-      id: 2,
-      ma_ctdt: 'KTPM2020',
-      ten_ctdt: 'Chương trình đào tạo ngành Kỹ thuật phần mềm',
-      nganh: 'Kỹ thuật phần mềm',
-      ma_nganh: '7480103',
-      khoa_quan_ly: 'Khoa Công nghệ thông tin',
-      he_dao_tao: 'Chính quy',
-      trinh_do: 'Đại học',
-      tong_tin_chi: 145,
-      thoi_gian_dao_tao: '4 năm',
-      nam_ban_hanh: 2020,
-      trang_thai: 1
-    },
-    {
-      id: 3,
-      ma_ctdt: 'HTTT2021',
-      ten_ctdt: 'Chương trình đào tạo ngành Hệ thống thông tin',
-      nganh: 'Hệ thống thông tin',
-      ma_nganh: '7480104',
-      khoa_quan_ly: 'Khoa Công nghệ thông tin',
-      he_dao_tao: 'Chính quy',
-      trinh_do: 'Đại học',
-      tong_tin_chi: 145,
-      thoi_gian_dao_tao: '4 năm',
-      nam_ban_hanh: 2021,
-      trang_thai: 1
-    },
-    {
-      id: 4,
-      ma_ctdt: 'KHMT2021',
-      ten_ctdt: 'Chương trình đào tạo ngành Khoa học máy tính',
-      nganh: 'Khoa học máy tính',
-      ma_nganh: '7480101',
-      khoa_quan_ly: 'Khoa Công nghệ thông tin',
-      he_dao_tao: 'Chính quy',
-      trinh_do: 'Đại học',
-      tong_tin_chi: 145,
-      thoi_gian_dao_tao: '4 năm',
-      nam_ban_hanh: 2021,
-      trang_thai: 1
-    },
-    {
-      id: 5,
-      ma_ctdt: 'DTVT2022',
-      ten_ctdt: 'Chương trình đào tạo ngành Điện tử viễn thông',
-      nganh: 'Điện tử viễn thông',
-      ma_nganh: '7520207',
-      khoa_quan_ly: 'Khoa Điện tử - Viễn thông',
-      he_dao_tao: 'Chính quy',
-      trinh_do: 'Đại học',
-      tong_tin_chi: 150,
-      thoi_gian_dao_tao: '4 năm',
-      nam_ban_hanh: 2022,
-      trang_thai: 1
-    }
-  ];
-
   // Fetch dữ liệu khi component mount
   useEffect(() => {
     fetchData();
-  }, [pagination.current, pagination.pageSize, sortInfo, statusFilter, yearFilter]);
+  }, [pagination.current, pagination.pageSize, sortInfo, yearFilter]);
 
   // Hàm lấy dữ liệu
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      let filteredData = [...mockGeneralInfos];
+    try {
+      const response = await axios.get('http://localhost:8080/api/thongTinChung');
+      let filteredData = response.data;
       
-      // Lọc theo từ khóa tìm kiếm
+      // Lọc theo từ khóa tìm kiếm (chỉ tìm theo tên chương trình)
       if (searchText) {
         filteredData = filteredData.filter(item => 
-          item.ma_ctdt.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.ten_ctdt.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.nganh.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.ma_nganh.toLowerCase().includes(searchText.toLowerCase()) ||
-          item.khoa_quan_ly.toLowerCase().includes(searchText.toLowerCase())
+          item.tenCtdt.toLowerCase().includes(searchText.toLowerCase())
         );
-      }
-      
-      // Lọc theo trạng thái
-      if (statusFilter !== 'all') {
-        const status = parseInt(statusFilter);
-        filteredData = filteredData.filter(item => item.trang_thai === status);
       }
       
       // Lọc theo năm ban hành
       if (yearFilter !== 'all') {
         const year = parseInt(yearFilter);
-        filteredData = filteredData.filter(item => item.nam_ban_hanh === year);
+        filteredData = filteredData.filter(item => item.namBanHanh === year);
       }
       
       // Sắp xếp
@@ -181,22 +98,17 @@ const ManageGeneralInfo = () => {
         ...prev,
         total
       }));
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      message.error('Không thể tải dữ liệu. Vui lòng thử lại sau.');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   // Xử lý tìm kiếm
   const handleSearch = (e) => {
     setSearchText(e.target.value);
-    setPagination(prev => ({
-      ...prev,
-      current: 1
-    }));
-  };
-
-  // Xử lý lọc theo trạng thái
-  const handleStatusFilter = (value) => {
-    setStatusFilter(value);
     setPagination(prev => ({
       ...prev,
       current: 1
@@ -242,17 +154,9 @@ const ManageGeneralInfo = () => {
   // Xử lý chỉnh sửa
   const handleEdit = (record) => {
     setEditingId(record.id);
-    setFileList([
-      {
-        uid: '-1',
-        name: record.logo_url.split('/').pop(),
-        status: 'done',
-        url: record.logo_url,
-      },
-    ]);
     form.setFieldsValue({
       ...record,
-      nam_thanh_lap: record.nam_thanh_lap ? moment(record.nam_thanh_lap) : null,
+      namBanHanh: record.namBanHanh ? moment(record.namBanHanh) : null,
     });
     setIsModalVisible(true);
   };
@@ -262,45 +166,20 @@ const ManageGeneralInfo = () => {
     Modal.confirm({
       title: 'Xác nhận xóa',
       content: 'Bạn có chắc chắn muốn xóa thông tin chương trình đào tạo này?',
-      onOk: () => {
+      onOk: async () => {
         setLoading(true);
-        // Mô phỏng API call
-        setTimeout(() => {
-          const updatedInfos = mockGeneralInfos.filter(info => info.id !== id);
-          // Cập nhật mockGeneralInfos
-          mockGeneralInfos.length = 0;
-          mockGeneralInfos.push(...updatedInfos);
-          
-          // Refresh dữ liệu
+        try {
+          await axios.delete(`http://localhost:8080/api/thongTinChung/${id}`);
+          message.success('Xóa thông tin thành công');
           fetchData();
-          
-          Modal.success({
-            content: 'Xóa thông tin thành công'
-          });
-        }, 500);
+        } catch (error) {
+          console.error('Error deleting:', error);
+          message.error('Có lỗi xảy ra khi xóa thông tin');
+        } finally {
+          setLoading(false);
+        }
       }
     });
-  };
-
-  // Xử lý toggle trạng thái
-  const handleToggleStatus = (record) => {
-    const newStatus = record.trang_thai === 1 ? 0 : 1;
-    setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      // Cập nhật mockGeneralInfos
-      const index = mockGeneralInfos.findIndex(info => info.id === record.id);
-      if (index !== -1) {
-        mockGeneralInfos[index].trang_thai = newStatus;
-      }
-      
-      // Refresh dữ liệu
-      fetchData();
-      
-      Modal.success({
-        content: `Chương trình đào tạo đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`
-      });
-    }, 500);
   };
 
   // Xử lý submit form
@@ -311,9 +190,15 @@ const ManageGeneralInfo = () => {
       // Cập nhật thông tin
       setTimeout(() => {
         // Cập nhật mockGeneralInfos
-        const index = mockGeneralInfos.findIndex(info => info.id === editingId);
+        const index = generalInfos.findIndex(info => info.id === editingId);
         if (index !== -1) {
-          mockGeneralInfos[index] = { ...mockGeneralInfos[index], ...values };
+          const updatedInfo = { ...generalInfos[index], ...values };
+          const updatedInfos = [
+            ...generalInfos.slice(0, index),
+            updatedInfo,
+            ...generalInfos.slice(index + 1)
+          ];
+          setGeneralInfos(updatedInfos);
         }
         
         // Refresh dữ liệu
@@ -327,7 +212,7 @@ const ManageGeneralInfo = () => {
       }, 500);
     } else {
       // Kiểm tra trùng mã chương trình đào tạo
-      const exists = mockGeneralInfos.some(info => info.ma_ctdt === values.ma_ctdt);
+      const exists = generalInfos.some(info => info.maCtdt === values.maCtdt);
       if (exists) {
         Modal.error({
           content: 'Mã chương trình đào tạo đã tồn tại!'
@@ -338,14 +223,14 @@ const ManageGeneralInfo = () => {
       
       // Thêm thông tin mới
       setTimeout(() => {
-        const newId = Math.max(...mockGeneralInfos.map(info => info.id), 0) + 1;
+        const newId = Math.max(...generalInfos.map(info => info.id), 0) + 1;
         const newItem = {
           id: newId,
           ...values
         };
         
-        // Cập nhật mockGeneralInfos
-        mockGeneralInfos.push(newItem);
+        // Cập nhật generalInfos
+        setGeneralInfos(prev => [...prev, newItem]);
         
         // Refresh dữ liệu
         fetchData();
@@ -362,13 +247,13 @@ const ManageGeneralInfo = () => {
   // Xử lý reset tất cả bộ lọc
   const handleResetFilters = () => {
     setSearchText('');
-    setStatusFilter('all');
     setYearFilter('all');
     setSortInfo({ columnKey: null, order: null });
     setPagination(prev => ({
       ...prev,
       current: 1
     }));
+    fetchData(); // Fetch data after resetting filters
   };
 
   // Định nghĩa các cột trong bảng
@@ -385,11 +270,11 @@ const ManageGeneralInfo = () => {
     },
     {
       title: 'Mã CTĐT',
-      dataIndex: 'ma_ctdt',
-      key: 'ma_ctdt',
+      dataIndex: 'maCtdt',
+      key: 'maCtdt',
       width: 120,
       sorter: true,
-      sortOrder: sortInfo.columnKey === 'ma_ctdt' ? sortInfo.order : null,
+      sortOrder: sortInfo.columnKey === 'maCtdt' ? sortInfo.order : null,
       ellipsis: {
         showTitle: false,
       },
@@ -401,8 +286,8 @@ const ManageGeneralInfo = () => {
     },
     {
       title: 'Tên chương trình đào tạo',
-      dataIndex: 'ten_ctdt',
-      key: 'ten_ctdt',
+      dataIndex: 'tenCtdt',
+      key: 'tenCtdt',
       width: 300,
       ellipsis: {
         showTitle: false,
@@ -413,7 +298,7 @@ const ManageGeneralInfo = () => {
         </Tooltip>
       ),
       sorter: true,
-      sortOrder: sortInfo.columnKey === 'ten_ctdt' ? sortInfo.order : null,
+      sortOrder: sortInfo.columnKey === 'tenCtdt' ? sortInfo.order : null,
     },
     {
       title: 'Ngành',
@@ -433,11 +318,11 @@ const ManageGeneralInfo = () => {
     },
     {
       title: 'Mã ngành',
-      dataIndex: 'ma_nganh',
-      key: 'ma_nganh',
+      dataIndex: 'maNganh',
+      key: 'maNganh',
       width: 120,
       sorter: true,
-      sortOrder: sortInfo.columnKey === 'ma_nganh' ? sortInfo.order : null,
+      sortOrder: sortInfo.columnKey === 'maNganh' ? sortInfo.order : null,
       ellipsis: {
         showTitle: false,
       },
@@ -449,77 +334,58 @@ const ManageGeneralInfo = () => {
     },
     {
       title: 'Tổng tín chỉ',
-      dataIndex: 'tong_tin_chi',
-      key: 'tong_tin_chi',
+      dataIndex: 'tongTinChi',
+      key: 'tongTinChi',
       width: 120,
       align: 'center',
       sorter: true,
-      sortOrder: sortInfo.columnKey === 'tong_tin_chi' ? sortInfo.order : null,
+      sortOrder: sortInfo.columnKey === 'tongTinChi' ? sortInfo.order : null,
       render: (value) => <span style={{ fontWeight: 'bold' }}>{value}</span>
     },
     {
       title: 'Năm ban hành',
-      dataIndex: 'nam_ban_hanh',
-      key: 'nam_ban_hanh',
+      dataIndex: 'namBanHanh',
+      key: 'namBanHanh',
       width: 130,
       align: 'center',
       sorter: true,
-      sortOrder: sortInfo.columnKey === 'nam_ban_hanh' ? sortInfo.order : null,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'trang_thai',
-      key: 'trang_thai',
-      width: 120,
-      align: 'center',
-      render: trang_thai => (
-        <Tag color={trang_thai === 1 ? 'green' : 'red'} style={{ minWidth: '80px', textAlign: 'center' }}>
-          {trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}
-        </Tag>
-      ),
+      sortOrder: sortInfo.columnKey === 'namBanHanh' ? sortInfo.order : null,
     },
     {
       title: 'Thao tác',
       key: 'action',
-      width: 220,
-      className: 'action-column',
+      fixed: 'right',
+      width: 200,
       render: (_, record) => (
-        <Space size="small" className="action-buttons">
-          <Button 
+        <Space size="small">
+          <Button
+            type="default"
             icon={<InfoCircleOutlined />}
             size="small"
             onClick={() => handleViewDetail(record)}
-          />
-          <Button 
-            type="primary" 
+          >
+            Chi tiết
+          </Button>
+          <Button
+            type="primary"
             icon={<EditOutlined />}
             size="small"
             onClick={() => handleEdit(record)}
           >
             Sửa
           </Button>
-          <Button 
-            danger 
+          <Button
+            danger
             icon={<DeleteOutlined />}
             size="small"
             onClick={() => handleDelete(record.id)}
           >
             Xóa
           </Button>
-          <Button
-            type={record.trang_thai === 1 ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trang_thai === 1 ? 'Vô hiệu' : 'Kích hoạt'}
-          </Button>
         </Space>
       ),
     },
   ];
-
-  // Lấy danh sách năm ban hành để tạo bộ lọc
-  const years = [...new Set(mockGeneralInfos.map(item => item.nam_ban_hanh))].sort();
 
   return (
     <Card>
@@ -527,23 +393,13 @@ const ManageGeneralInfo = () => {
         <Title level={2}>Quản lý CTĐT</Title>
         <Space wrap>
           <Input
-            placeholder="Tìm kiếm..."
+            placeholder="Tìm kiếm theo tên chương trình..."
             prefix={<SearchOutlined />}
-            style={{ width: 220 }}
+            style={{ width: 300 }}
             value={searchText}
             onChange={handleSearch}
             allowClear
           />
-          <Select
-            placeholder="Trạng thái"
-            style={{ width: 150 }}
-            value={statusFilter}
-            onChange={handleStatusFilter}
-          >
-            <Option value="all">Tất cả</Option>
-            <Option value="1">Hoạt động</Option>
-            <Option value="0">Không hoạt động</Option>
-          </Select>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
@@ -551,9 +407,8 @@ const ManageGeneralInfo = () => {
               setEditingId(null);
               form.resetFields();
               form.setFieldsValue({
-                trang_thai: 1,
-                he_dao_tao: 'Chính quy',
-                trinh_do: 'Đại học',
+                heDaoTao: 'Chính quy',
+                trinhDo: 'Đại học',
               });
               setIsModalVisible(true);
             }}
@@ -562,10 +417,7 @@ const ManageGeneralInfo = () => {
           </Button>
           <Button 
             icon={<ReloadOutlined />} 
-            onClick={() => {
-              handleResetFilters();
-              fetchData();
-            }}
+            onClick={handleResetFilters}
           >
             Làm mới
           </Button>
@@ -605,7 +457,7 @@ const ManageGeneralInfo = () => {
           <Row gutter={[24, 0]}>
             <Col span={12}>
               <Form.Item
-                name="ma_ctdt"
+                name="maCtdt"
                 label="Mã chương trình đào tạo"
                 rules={[{ required: true, message: 'Vui lòng nhập mã chương trình đào tạo!' }]}
               >
@@ -614,7 +466,7 @@ const ManageGeneralInfo = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="nam_ban_hanh"
+                name="namBanHanh"
                 label="Năm ban hành"
                 rules={[{ required: true, message: 'Vui lòng nhập năm ban hành!' }]}
               >
@@ -624,7 +476,7 @@ const ManageGeneralInfo = () => {
           </Row>
           
           <Form.Item
-            name="ten_ctdt"
+            name="tenCtdt"
             label="Tên chương trình đào tạo"
             rules={[{ required: true, message: 'Vui lòng nhập tên chương trình đào tạo!' }]}
           >
@@ -643,7 +495,7 @@ const ManageGeneralInfo = () => {
             </Col>
             <Col span={12}>
               <Form.Item
-                name="ma_nganh"
+                name="maNganh"
                 label="Mã ngành"
                 rules={[{ required: true, message: 'Vui lòng nhập mã ngành!' }]}
               >
@@ -653,7 +505,7 @@ const ManageGeneralInfo = () => {
           </Row>
           
           <Form.Item
-            name="khoa_quan_ly"
+            name="khoaQuanLy"
             label="Khoa quản lý"
             rules={[{ required: true, message: 'Vui lòng nhập khoa quản lý!' }]}
           >
@@ -663,7 +515,7 @@ const ManageGeneralInfo = () => {
           <Row gutter={[24, 0]}>
             <Col span={8}>
               <Form.Item
-                name="he_dao_tao"
+                name="heDaoTao"
                 label="Hệ đào tạo"
                 rules={[{ required: true, message: 'Vui lòng chọn hệ đào tạo!' }]}
               >
@@ -676,7 +528,7 @@ const ManageGeneralInfo = () => {
             </Col>
             <Col span={8}>
               <Form.Item
-                name="trinh_do"
+                name="trinhDo"
                 label="Trình độ"
                 rules={[{ required: true, message: 'Vui lòng chọn trình độ!' }]}
               >
@@ -690,41 +542,15 @@ const ManageGeneralInfo = () => {
             </Col>
             <Col span={8}>
               <Form.Item
-                name="trang_thai"
-                label="Trạng thái"
-                rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-              >
-                <Select>
-                  <Option value={1}>Hoạt động</Option>
-                  <Option value={0}>Không hoạt động</Option>
-                </Select>
-              </Form.Item>
-            </Col>
-          </Row>
-          
-          <Row gutter={[24, 0]}>
-            <Col span={12}>
-              <Form.Item
-                name="tong_tin_chi"
+                name="tongTinChi"
                 label="Tổng tín chỉ"
                 rules={[{ required: true, message: 'Vui lòng nhập tổng số tín chỉ!' }]}
               >
                 <InputNumber style={{ width: '100%' }} min={1} max={300} prefix={<NumberOutlined />} />
               </Form.Item>
             </Col>
-            <Col span={12}>
-              <Form.Item
-                name="thoi_gian_dao_tao"
-                label="Thời gian đào tạo"
-                rules={[{ required: true, message: 'Vui lòng nhập thời gian đào tạo!' }]}
-              >
-                <Input prefix={<FieldTimeOutlined />} />
-              </Form.Item>
-            </Col>
           </Row>
-
-          <Divider />
-
+          
           <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
             <Space>
               <Button
@@ -775,34 +601,31 @@ const ManageGeneralInfo = () => {
             <div style={{ background: '#f5f5f5', padding: '20px', borderRadius: '5px', marginBottom: '20px' }}>
               <Row gutter={[8, 8]}>
                 <Col span={24}>
-                  <Title level={4}>{detailInfo.ten_ctdt}</Title>
+                  <Title level={4}>{detailInfo.tenCtdt}</Title>
                 </Col>
                 <Col span={12}>
                   <Text strong>ID:</Text> {detailInfo.id}
                 </Col>
                 <Col span={12}>
-                  <Text strong>Mã CTĐT:</Text> {detailInfo.ma_ctdt}
+                  <Text strong>Mã CTĐT:</Text> {detailInfo.maCtdt}
                 </Col>
               </Row>
               <div style={{ marginTop: 10 }}>
                 <Tag color="blue">{detailInfo.nganh}</Tag>
-                <Tag color="purple">Mã ngành: {detailInfo.ma_nganh}</Tag>
-                <Tag color="cyan">Năm ban hành: {detailInfo.nam_ban_hanh}</Tag>
+                <Tag color="purple">Mã ngành: {detailInfo.maNganh}</Tag>
+                <Tag color="cyan">Năm ban hành: {detailInfo.namBanHanh}</Tag>
               </div>
             </div>
 
             <Row gutter={[24, 24]}>
               <Col span={12}>
-                <Paragraph><BankOutlined /> <Text strong>Khoa quản lý:</Text> {detailInfo.khoa_quan_ly}</Paragraph>
-                <Paragraph><Text strong>Hệ đào tạo:</Text> {detailInfo.he_dao_tao}</Paragraph>
-                <Paragraph><Text strong>Trình độ:</Text> {detailInfo.trinh_do}</Paragraph>
+                <Paragraph><BankOutlined /> <Text strong>Khoa quản lý:</Text> {detailInfo.khoaQuanLy}</Paragraph>
+                <Paragraph><Text strong>Hệ đào tạo:</Text> {detailInfo.heDaoTao}</Paragraph>
+                <Paragraph><Text strong>Trình độ:</Text> {detailInfo.trinhDo}</Paragraph>
               </Col>
               <Col span={12}>
-                <Paragraph><NumberOutlined /> <Text strong>Tổng tín chỉ:</Text> {detailInfo.tong_tin_chi}</Paragraph>
-                <Paragraph><FieldTimeOutlined /> <Text strong>Thời gian đào tạo:</Text> {detailInfo.thoi_gian_dao_tao}</Paragraph>
-                <Paragraph><Text strong>Trạng thái:</Text> <Tag color={detailInfo.trang_thai === 1 ? 'green' : 'red'}>
-                  {detailInfo.trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}
-                </Tag></Paragraph>
+                <Paragraph><NumberOutlined /> <Text strong>Tổng tín chỉ:</Text> {detailInfo.tongTinChi}</Paragraph>
+                <Paragraph><FieldTimeOutlined /> <Text strong>Thời gian đào tạo:</Text> {detailInfo.thoiGianDaoTao}</Paragraph>
               </Col>
             </Row>
           </>
