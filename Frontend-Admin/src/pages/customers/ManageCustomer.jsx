@@ -57,7 +57,7 @@ const ManageCustomer = () => {
       soDienThoai: record.soDienThoai,
       namSinh: record.namSinh,
       trangThai: record.trangThai,
-      roles: record.roles?.map(role => role.name)
+      vaiTro: record.vaiTro
     });
     setIsModalVisible(true);
   };
@@ -70,13 +70,20 @@ const ManageCustomer = () => {
       onOk: async () => {
         try {
           setLoading(true);
-          // In a real application, you'd call an API to delete the user
-          // await axios.delete(`http://localhost:8080/api/user/${userId}`);
+          await axios.delete(`http://localhost:8080/api/user/${userId}`);
+          
+          Modal.success({
+            title: 'Thành công',
+            content: 'Xóa người dùng thành công!'
+          });
+          
           fetchUsers(); // Refresh the user list
+          setLoading(false);
         } catch (error) {
           console.error('Error deleting user:', error);
           Modal.error({
-            content: 'Không thể xóa người dùng'
+            title: 'Lỗi',
+            content: `Không thể xóa người dùng: ${error.response?.data?.message || error.message}`
           });
           setLoading(false);
         }
@@ -88,15 +95,29 @@ const ManageCustomer = () => {
   const handleToggleStatus = async (record) => {
     try {
       setLoading(true);
-      const newStatus = !record.trangThai;
+      // If the user is active, set status to false (0)
+      // If already inactive, set status to true (1)
+      const newStatus = record.trangThai ? false : true;
       
-      // In a real application, you'd call an API to update the status
-      // await axios.patch(`http://localhost:8080/api/user/${record.id}`, { trangThai: newStatus });
+      // Create a UserDto with only the status field
+      const statusUpdate = {
+        trangThai: newStatus
+      };
+      
+      await axios.put(`http://localhost:8080/api/user/${record.id}`, statusUpdate);
+      
+      Modal.success({
+        title: 'Thành công',
+        content: `Người dùng đã được ${newStatus ? 'kích hoạt' : 'vô hiệu hóa'} thành công!`
+      });
+      
       fetchUsers(); // Refresh the user list
+      setLoading(false);
     } catch (error) {
       console.error('Error updating user status:', error);
       Modal.error({
-        content: 'Không thể cập nhật trạng thái người dùng'
+        title: 'Lỗi',
+        content: `Không thể cập nhật trạng thái người dùng: ${error.response?.data?.message || error.message}`
       });
       setLoading(false);
     }
@@ -107,21 +128,51 @@ const ManageCustomer = () => {
     try {
       setLoading(true);
       
+      // Create a proper UserDto object
+      const userData = {
+        username: values.username,
+        password: values.password,
+        hoTen: values.hoTen,
+        email: values.email,
+        soDienThoai: values.soDienThoai,
+        namSinh: values.namSinh ? parseInt(values.namSinh) : null,
+        trangThai: values.trangThai,
+        vaiTro: values.vaiTro
+      };
+      
+      console.log('Sending user data:', userData);
+      
       if (editingId) {
-        // In a real application, you'd call an API to update the user
-        // await axios.put(`http://localhost:8080/api/user/${editingId}`, values);
+        // Update existing user
+        await axios.put(`http://localhost:8080/api/user/${editingId}`, userData);
+        
+        Modal.success({
+          title: 'Thành công',
+          content: 'Cập nhật người dùng thành công!'
+        });
       } else {
-        // In a real application, you'd call an API to add a new user
-        // await axios.post('http://localhost:8080/api/user', values);
+        // Add new user - using the /register endpoint for better validation
+        const response = await axios.post('http://localhost:8080/api/user/register', userData);
+        
+        Modal.success({
+          title: 'Thành công',
+          content: 'Thêm người dùng mới thành công!'
+        });
       }
       
       setIsModalVisible(false);
+      form.resetFields();
       fetchUsers(); // Refresh the user list
+      setLoading(false);
     } catch (error) {
       console.error('Error submitting form:', error);
+      
+      // Show detailed error message
       Modal.error({
-        content: 'Không thể lưu thông tin người dùng'
+        title: 'Lỗi',
+        content: `Không thể lưu thông tin người dùng: ${error.response?.data?.message || error.message}`
       });
+      
       setLoading(false);
     }
   };
@@ -179,16 +230,14 @@ const ManageCustomer = () => {
     },
     {
       title: 'Vai trò',
-      dataIndex: 'roles',
-      key: 'roles',
+      dataIndex: 'vaiTro',
+      key: 'vaiTro',
       width: 150,
-      render: (roles) => (
+      render: (vaiTro) => (
         <span>
-          {roles && roles.map(role => (
-            <Tag color="blue" key={role.id}>
-              {role.name.replace('ROLE_', '')}
-            </Tag>
-          ))}
+          <Tag color="blue">
+            {vaiTro}
+          </Tag>
         </span>
       ),
     },
@@ -230,12 +279,6 @@ const ManageCustomer = () => {
             onClick={() => handleDelete(record.id)}
           >
             Xóa
-          </Button>
-          <Button
-            type={record.trangThai ? 'default' : 'primary'}
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trangThai ? 'Vô hiệu' : 'Kích hoạt'}
           </Button>
           <Button
             icon={<InfoCircleOutlined />}
@@ -327,11 +370,9 @@ const ManageCustomer = () => {
             <p><strong>Năm sinh:</strong> {detailUser.namSinh}</p>
             <p>
               <strong>Vai trò:</strong>{' '}
-              {detailUser.roles && detailUser.roles.map(role => (
-                <Tag color="blue" key={role.id}>
-                  {role.name.replace('ROLE_', '')}
-                </Tag>
-              ))}
+              <Tag color="blue">
+                {detailUser.vaiTro}
+              </Tag>
             </p>
             <p>
               <strong>Trạng thái:</strong>{' '}
@@ -412,19 +453,21 @@ const ManageCustomer = () => {
           </Form.Item>
           
           <Form.Item
-            name="roles"
+            name="vaiTro"
             label="Vai trò"
+            initialValue="NGUOI_DUNG"
           >
-            <Select mode="multiple" placeholder="Chọn vai trò">
-              <Option value="ROLE_ADMIN">Admin</Option>
-              <Option value="ROLE_USER">User</Option>
-              <Option value="ROLE_MANAGER">Manager</Option>
+            <Select placeholder="Chọn vai trò">
+              <Option value="ADMIN">Admin</Option>
+              <Option value="NGUOI_DUNG">Người dùng</Option>
+              <Option value="GIANG_VIEN">Giảng viên</Option>
             </Select>
           </Form.Item>
           
           <Form.Item
             name="trangThai"
             label="Trạng thái"
+            initialValue={true}
             rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
           >
             <Select>
