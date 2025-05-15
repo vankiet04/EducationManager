@@ -30,7 +30,7 @@ public class Score {
     
     
     @ManyToOne (fetch = FetchType.LAZY)
-    @JoinColumn(name = "decuong_id", nullable = false)
+    @JoinColumn(name = "decuong_id")
     private OutlineDetail outlineDetail;
     
     @Column(name = "ten_cot_diem", nullable = false, length = 100)

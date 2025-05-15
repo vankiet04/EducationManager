@@ -1,74 +1,43 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, InputNumber, 
-  Tag, Tooltip, Divider, Progress } from 'antd';
+  Tooltip, Progress, message } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  ReloadOutlined, InfoCircleOutlined, PercentageOutlined } from '@ant-design/icons';
+  ReloadOutlined, PercentageOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
-const { Title, Text } = Typography;
+const { Title } = Typography;
 const { Option } = Select;
-const { TextArea } = Input;
+
+const API_URL = 'http://localhost:8080/api';
+// Đặt ID đề cương mặc định
+const DEFAULT_DECUONG_ID = 1;
+
+// Định nghĩa CSS
+const tableStyles = {
+  container: {
+    width: '100%',
+    overflowX: 'auto',
+    marginBottom: '16px'
+  },
+  actionColumn: {
+    whiteSpace: 'nowrap',
+    boxShadow: 'none !important',
+    background: 'transparent !important'
+  },
+  actionButtons: {
+    display: 'flex',
+    flexWrap: 'nowrap',
+    gap: '6px'
+  }
+};
 
 const ManageGradeColumns = () => {
   const [gradeColumns, setGradeColumns] = useState([]);
-  const [courses, setCourses] = useState([]);
-  const [syllabuses, setSyllabuses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
-  const [courseFilter, setCourseFilter] = useState('all');
   const [form] = Form.useForm();
-
-  // Mô phỏng dữ liệu học phần
-  const mockCourses = [
-    { id: 1, ma_hoc_phan: 'CS101', ten_hoc_phan: 'Nhập môn lập trình', so_tin_chi: 3, khoa_phu_trach: 'Công nghệ thông tin' },
-    { id: 2, ma_hoc_phan: 'CS201', ten_hoc_phan: 'Cấu trúc dữ liệu và giải thuật', so_tin_chi: 4, khoa_phu_trach: 'Công nghệ thông tin' },
-    { id: 3, ma_hoc_phan: 'CS301', ten_hoc_phan: 'Cơ sở dữ liệu', so_tin_chi: 4, khoa_phu_trach: 'Công nghệ thông tin' },
-    { id: 4, ma_hoc_phan: 'MA101', ten_hoc_phan: 'Đại số tuyến tính', so_tin_chi: 3, khoa_phu_trach: 'Toán - Tin học' },
-  ];
-
-  // Mô phỏng dữ liệu đề cương
-  const mockSyllabuses = [
-    { id: 1, hoc_phan_id: 1, phien_ban: '2023.1', trang_thai: 'Đã phê duyệt' },
-    { id: 2, hoc_phan_id: 2, phien_ban: '2023.1', trang_thai: 'Đã phê duyệt' },
-    { id: 3, hoc_phan_id: 3, phien_ban: '2022.2', trang_thai: 'Đã phê duyệt' },
-  ];
-
-  // Mô phỏng dữ liệu cột điểm
-  const mockGradeColumns = [
-    {
-      id: 1,
-      decuong_id: 1,
-      ten_cot_diem: 'Chuyên cần',
-      ty_le_phan_tram: 10,
-      hinh_thuc: 'Điểm danh',
-      trang_thai: 1
-    },
-    {
-      id: 2,
-      decuong_id: 1,
-      ten_cot_diem: 'Giữa kỳ',
-      ty_le_phan_tram: 30,
-      hinh_thuc: 'Thi viết',
-      trang_thai: 1
-    },
-    {
-      id: 3,
-      decuong_id: 1,
-      ten_cot_diem: 'Cuối kỳ',
-      ty_le_phan_tram: 60,
-      hinh_thuc: 'Thi viết',
-      trang_thai: 1
-    },
-    {
-      id: 4,
-      decuong_id: 2,
-      ten_cot_diem: 'Chuyên cần',
-      ty_le_phan_tram: 10,
-      hinh_thuc: 'Điểm danh',
-      trang_thai: 1
-    }
-  ];
 
   // Fetch dữ liệu khi component mount
   useEffect(() => {
@@ -76,25 +45,23 @@ const ManageGradeColumns = () => {
   }, []);
 
   // Hàm lấy dữ liệu
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      setCourses(mockCourses);
-      setSyllabuses(mockSyllabuses);
-      setGradeColumns(mockGradeColumns);
+    try {
+      // Gọi API để lấy dữ liệu cột điểm
+      const response = await axios.get(`${API_URL}/cotdiem`);
+      setGradeColumns(response.data);
       setLoading(false);
-    }, 500);
+    } catch (error) {
+      console.error('Lỗi khi lấy dữ liệu:', error);
+      message.error('Không thể tải dữ liệu cột điểm. Vui lòng thử lại sau!');
+      setLoading(false);
+    }
   };
 
   // Xử lý tìm kiếm
   const handleSearch = (e) => {
     setSearchText(e.target.value);
-  };
-
-  // Xử lý lọc theo học phần
-  const handleCourseFilter = (value) => {
-    setCourseFilter(value);
   };
 
   // Lọc dữ liệu
@@ -104,35 +71,20 @@ const ManageGradeColumns = () => {
     // Lọc theo từ khóa tìm kiếm
     if (searchText) {
       result = result.filter(item => 
-        item.ten_cot_diem.toLowerCase().includes(searchText.toLowerCase())
+        item.tenCotDiem.toLowerCase().includes(searchText.toLowerCase())
       );
     }
     
-    // Lọc theo học phần
-    if (courseFilter !== 'all') {
-      const courseId = parseInt(courseFilter);
-      result = result.filter(item => item.decuong_id === courseId);
-    }
-    
     return result;
-  };
-
-  // Kiểm tra tổng tỷ lệ điểm
-  const checkTotalPercentage = (courseId) => {
-    const courseGradeColumns = gradeColumns.filter(item => item.decuong_id === courseId);
-    const total = courseGradeColumns.reduce((sum, item) => sum + item.ty_le_phan_tram, 0);
-    return total;
   };
 
   // Xử lý chỉnh sửa cột điểm
   const handleEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
-      decuong_id: record.decuong_id,
-      ten_cot_diem: record.ten_cot_diem,
-      ty_le_phan_tram: record.ty_le_phan_tram,
-      hinh_thuc: record.hinh_thuc,
-      trang_thai: record.trang_thai
+      tenCotDiem: record.tenCotDiem,
+      tyLePhanTram: parseFloat(record.tyLePhanTram),
+      hinhThuc: record.hinhThuc
     });
     setIsModalVisible(true);
   };
@@ -142,115 +94,84 @@ const ManageGradeColumns = () => {
     Modal.confirm({
       title: 'Xác nhận xóa',
       content: 'Bạn có chắc chắn muốn xóa cột điểm này?',
-      onOk: () => {
+      onOk: async () => {
         setLoading(true);
-        // Mô phỏng API call
-        setTimeout(() => {
+        try {
+          await axios.delete(`${API_URL}/cotdiem/${id}`);
+          
+          // Cập nhật state sau khi xóa thành công
           const updatedColumns = gradeColumns.filter(column => column.id !== id);
           setGradeColumns(updatedColumns);
-          Modal.success({
-            content: 'Xóa cột điểm thành công'
-          });
+          
+          message.success('Xóa cột điểm thành công');
           setLoading(false);
-        }, 500);
+        } catch (error) {
+          console.error('Lỗi khi xóa cột điểm:', error);
+          message.error('Không thể xóa cột điểm. Vui lòng thử lại sau!');
+          setLoading(false);
+        }
       }
     });
   };
 
-  // Xử lý toggle trạng thái
-  const handleToggleStatus = (record) => {
-    const newStatus = record.trang_thai === 1 ? 0 : 1;
-    setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      const updatedColumns = gradeColumns.map(column => {
-        if (column.id === record.id) {
-          return { ...column, trang_thai: newStatus };
-        }
-        return column;
-      });
-      setGradeColumns(updatedColumns);
-      Modal.success({
-        content: `Cột điểm đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`
-      });
-      setLoading(false);
-    }, 500);
-  };
-
   // Xử lý submit form
-  const handleSubmit = (values) => {
+  const handleSubmit = async (values) => {
     setLoading(true);
     
-    // Kiểm tra tỷ lệ điểm
-    const columnsWithSameSyllabus = gradeColumns.filter(col => col.decuong_id === values.decuong_id);
-    const currentTotalPercentage = columnsWithSameSyllabus.reduce((sum, item) => sum + item.ty_le_phan_tram, 0);
-    const existingColumn = editingId ? gradeColumns.find(column => column.id === editingId) : null;
-    const existingPercentage = existingColumn ? existingColumn.ty_le_phan_tram : 0;
-    const newTotalPercentage = currentTotalPercentage - existingPercentage + values.ty_le_phan_tram;
-    
-    if (newTotalPercentage > 100) {
-      Modal.error({
-        title: 'Lỗi tỷ lệ điểm',
-        content: `Tổng tỷ lệ điểm vượt quá 100%. Hiện tại: ${currentTotalPercentage - existingPercentage}%, thêm mới: ${values.ty_le_phan_tram}%`
-      });
-      setLoading(false);
-      return;
-    }
-    
-    const columnData = {
-      decuong_id: values.decuong_id,
-      ten_cot_diem: values.ten_cot_diem,
-      ty_le_phan_tram: values.ty_le_phan_tram,
-      hinh_thuc: values.hinh_thuc,
-      trang_thai: values.trang_thai
-    };
-    
-    if (editingId) {
-      // Cập nhật cột điểm
-      setTimeout(() => {
+    try {
+      const columnData = {
+        id: editingId || null,
+        decuongId: DEFAULT_DECUONG_ID, // Sử dụng ID đề cương mặc định
+        tenCotDiem: values.tenCotDiem,
+        tyLePhanTram: values.tyLePhanTram,
+        hinhThuc: values.hinhThuc
+      };
+      
+      let response;
+      if (editingId) {
+        // Cập nhật cột điểm
+        response = await axios.put(`${API_URL}/cotdiem/${editingId}`, columnData);
+        
+        // Cập nhật state sau khi sửa thành công
         const updatedColumns = gradeColumns.map(column => {
           if (column.id === editingId) {
-            return { ...column, ...columnData };
+            return response.data;
           }
           return column;
         });
+        
         setGradeColumns(updatedColumns);
-        setIsModalVisible(false);
-        form.resetFields();
-        Modal.success({
-          content: 'Cập nhật cột điểm thành công'
-        });
-        setLoading(false);
-      }, 500);
-    } else {
-      // Kiểm tra mã cột điểm đã tồn tại chưa
-      const existingCode = gradeColumns.some(
-        column => column.ten_cot_diem === values.ten_cot_diem && 
-                column.decuong_id === values.decuong_id
-      );
-      
-      if (existingCode) {
-        Modal.error({
-          content: 'Tên cột điểm đã tồn tại cho đề cương này!'
-        });
-        setLoading(false);
-        return;
+        message.success('Cập nhật cột điểm thành công');
+      } else {
+        // Kiểm tra mã cột điểm đã tồn tại chưa
+        const existingCode = gradeColumns.some(
+          column => column.tenCotDiem === values.tenCotDiem && 
+                  column.decuongId === DEFAULT_DECUONG_ID
+        );
+        
+        if (existingCode) {
+          Modal.error({
+            content: 'Tên cột điểm đã tồn tại!'
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Thêm cột điểm mới
+        response = await axios.post(`${API_URL}/cotdiem`, columnData);
+        
+        // Cập nhật state sau khi thêm thành công
+        setGradeColumns([...gradeColumns, response.data]);
+        message.success('Thêm cột điểm mới thành công');
       }
       
-      // Thêm cột điểm mới
-      setTimeout(() => {
-        const newColumn = {
-          id: Math.max(...gradeColumns.map(column => column.id), 0) + 1,
-          ...columnData
-        };
-        setGradeColumns([...gradeColumns, newColumn]);
-        setIsModalVisible(false);
-        form.resetFields();
-        Modal.success({
-          content: 'Thêm cột điểm mới thành công'
-        });
-        setLoading(false);
-      }, 500);
+      setIsModalVisible(false);
+      form.resetFields();
+      setLoading(false);
+    } catch (error) {
+      console.error('Lỗi khi lưu cột điểm:', error);
+      message.error('Không thể lưu cột điểm. Vui lòng thử lại sau!');
+      setLoading(false);
     }
   };
 
@@ -265,16 +186,9 @@ const ManageGradeColumns = () => {
       sorter: (a, b) => a.id - b.id,
     },
     {
-      title: 'Đề cương',
-      dataIndex: 'decuong_id',
-      key: 'decuong_id',
-      width: 120,
-      sorter: (a, b) => a.decuong_id - b.decuong_id,
-    },
-    {
       title: 'Tên cột điểm',
-      dataIndex: 'ten_cot_diem',
-      key: 'ten_cot_diem',
+      dataIndex: 'tenCotDiem',
+      key: 'tenCotDiem',
       width: 200,
       ellipsis: {
         showTitle: false,
@@ -284,34 +198,37 @@ const ManageGradeColumns = () => {
           {text}
         </Tooltip>
       ),
-      sorter: (a, b) => a.ten_cot_diem.localeCompare(b.ten_cot_diem),
+      sorter: (a, b) => a.tenCotDiem.localeCompare(b.tenCotDiem),
     },
     {
       title: 'Tỷ lệ (%)',
-      dataIndex: 'ty_le_phan_tram',
-      key: 'ty_le_phan_tram',
+      dataIndex: 'tyLePhanTram',
+      key: 'tyLePhanTram',
       width: 120,
-      render: (text, record) => (
-        <Tooltip title={`${text}%`}>
-          <div style={{ display: 'flex', alignItems: 'center' }}>
-            <div style={{ width: '60px', marginRight: '8px' }}>
-              <Progress 
-                percent={text} 
-                showInfo={false} 
-                size="small" 
-                status="normal"
-              />
+      render: (text) => {
+        const percentage = parseFloat(text);
+        return (
+          <Tooltip title={`${percentage}%`}>
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+              <div style={{ width: '60px', marginRight: '8px' }}>
+                <Progress 
+                  percent={percentage} 
+                  showInfo={false} 
+                  size="small" 
+                  status="normal"
+                />
+              </div>
+              <span>{percentage}%</span>
             </div>
-            <span>{text}%</span>
-          </div>
-        </Tooltip>
-      ),
-      sorter: (a, b) => a.ty_le_phan_tram - b.ty_le_phan_tram,
+          </Tooltip>
+        );
+      },
+      sorter: (a, b) => parseFloat(a.tyLePhanTram) - parseFloat(b.tyLePhanTram),
     },
     {
       title: 'Hình thức',
-      dataIndex: 'hinh_thuc',
-      key: 'hinh_thuc',
+      dataIndex: 'hinhThuc',
+      key: 'hinhThuc',
       width: 150,
       ellipsis: {
         showTitle: false,
@@ -321,7 +238,7 @@ const ManageGradeColumns = () => {
           {text}
         </Tooltip>
       ),
-      sorter: (a, b) => a.hinh_thuc.localeCompare(b.hinh_thuc),
+      sorter: (a, b) => a.hinhThuc.localeCompare(b.hinhThuc),
     },
     {
       title: 'Thao tác',
@@ -329,7 +246,7 @@ const ManageGradeColumns = () => {
       width: 220,
       className: 'action-column',
       render: (_, record) => (
-        <Space size="small" className="action-buttons">
+        <Space size="small" style={tableStyles.actionButtons}>
           <Button 
             type="primary" 
             icon={<EditOutlined />}
@@ -345,13 +262,6 @@ const ManageGradeColumns = () => {
             onClick={() => handleDelete(record.id)}
           >
             Xóa
-          </Button>
-          <Button
-            type={record.trang_thai === 1 ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trang_thai === 1 ? 'Vô hiệu' : 'Kích hoạt'}
           </Button>
         </Space>
       ),
@@ -370,22 +280,6 @@ const ManageGradeColumns = () => {
             onChange={handleSearch}
             allowClear
           />
-          <Select
-            placeholder="Lọc theo đề cương"
-            style={{ width: 250 }}
-            value={courseFilter}
-            onChange={handleCourseFilter}
-          >
-            <Option value="all">Tất cả đề cương</Option>
-            {syllabuses.map(syllabus => {
-              const course = courses.find(c => c.id === syllabus.hoc_phan_id);
-              return (
-                <Option key={syllabus.id} value={syllabus.id.toString()}>
-                  {course?.ma_hoc_phan} - Đề cương {syllabus.phien_ban}
-                </Option>
-              );
-            })}
-          </Select>
           <Button 
             type="primary" 
             icon={<PlusOutlined />}
@@ -393,8 +287,7 @@ const ManageGradeColumns = () => {
               setEditingId(null);
               form.resetFields();
               form.setFieldsValue({
-                trang_thai: 1,
-                ty_le_phan_tram: 0
+                tyLePhanTram: 0
               });
               setIsModalVisible(true);
             }}
@@ -410,7 +303,7 @@ const ManageGradeColumns = () => {
         </div>
       </div>
 
-      <div className="table-container" style={{ width: '100%', overflowX: 'auto' }}>
+      <div style={tableStyles.container}>
         <Table
           columns={columns}
           dataSource={filteredData()}
@@ -428,38 +321,6 @@ const ManageGradeColumns = () => {
         />
       </div>
 
-      <style jsx global>{`
-        .table-container {
-          width: 100%;
-          overflow-x: auto;
-          margin-bottom: 16px;
-        }
-        .action-column {
-          white-space: nowrap;
-          box-shadow: none !important;
-          background: transparent !important;
-        }
-        .action-buttons {
-          display: flex;
-          flex-wrap: nowrap;
-          gap: 6px;
-        }
-        .action-buttons .ant-btn {
-          min-width: initial;
-          padding: 0 8px;
-        }
-        .ant-table-cell {
-          border-right: none !important;
-        }
-        .ant-table-thead > tr > th {
-          border-right: none !important;
-          background-color: #f5f5f5;
-        }
-        .ant-table-tbody > tr > td {
-          border-right: none !important;
-        }
-      `}</style>
-
       <Modal
         title={editingId ? "Cập nhật cột điểm" : "Thêm cột điểm mới"}
         open={isModalVisible}
@@ -476,24 +337,7 @@ const ManageGradeColumns = () => {
           onFinish={handleSubmit}
         >
           <Form.Item
-            name="decuong_id"
-            label="Đề cương"
-            rules={[{ required: true, message: 'Vui lòng chọn đề cương!' }]}
-          >
-            <Select placeholder="Chọn đề cương">
-              {syllabuses.map(syllabus => {
-                const course = courses.find(c => c.id === syllabus.hoc_phan_id);
-                return (
-                  <Option key={syllabus.id} value={syllabus.id}>
-                    {course?.ma_hoc_phan} - Đề cương {syllabus.phien_ban}
-                  </Option>
-                );
-              })}
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="ten_cot_diem"
+            name="tenCotDiem"
             label="Tên cột điểm"
             rules={[{ required: true, message: 'Vui lòng nhập tên cột điểm!' }]}
           >
@@ -501,7 +345,7 @@ const ManageGradeColumns = () => {
           </Form.Item>
 
           <Form.Item
-            name="ty_le_phan_tram"
+            name="tyLePhanTram"
             label="Tỷ lệ phần trăm"
             rules={[
               { required: true, message: 'Vui lòng nhập tỷ lệ phần trăm!' },
@@ -518,7 +362,7 @@ const ManageGradeColumns = () => {
           </Form.Item>
 
           <Form.Item
-            name="hinh_thuc"
+            name="hinhThuc"
             label="Hình thức"
             rules={[{ required: true, message: 'Vui lòng nhập hình thức đánh giá!' }]}
           >
@@ -529,17 +373,6 @@ const ManageGradeColumns = () => {
               <Option value="Bài tập lớn">Bài tập lớn</Option>
               <Option value="Thuyết trình">Thuyết trình</Option>
               <Option value="Thực hành">Thực hành</Option>
-            </Select>
-          </Form.Item>
-
-          <Form.Item
-            name="trang_thai"
-            label="Trạng thái"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-          >
-            <Select>
-              <Option value={1}>Hoạt động</Option>
-              <Option value={0}>Không hoạt động</Option>
             </Select>
           </Form.Item>
 
