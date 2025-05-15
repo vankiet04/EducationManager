@@ -1,0 +1,90 @@
+[
+  {
+    "id": 1,
+    "username": "admin",
+    "password": "$2y$10$FKlZJ6Ky0GPM/tAEFO.DwehOQHblUCfEbOM35ZED3kN32yVxUcmOe",
+    "ho_ten": "Quản trị viên",
+    "email": "admin@truong.edu.vn",
+    "so_dien_thoai": "0901234567",
+    "vai_tro": "admin",
+    "nam_sinh": 1985,
+    "trang_thai": 1
+  },
+  {
+    "id": 2,
+    "username": "truongkhoa",
+    "password": "$2y$10$IiU5NAzEpBnZ1K7V3YlbVew5a3RKV1hEfYCJqXcLYU4DQB3TLW3hW",
+    "ho_ten": "Nguyễn Văn Trưởng",
+    "email": "truongkhoa@truong.edu.vn",
+    "so_dien_thoai": "0912345678",
+    "vai_tro": "truongkhoa",
+    "nam_sinh": 1975,
+    "trang_thai": 1
+  },
+  {
+    "id": 3,
+    "username": "phuong",
+    "password": "$2y$10$0gLaiD6mxrx.yBBgF5yKZOAfl/IK6D1Kj0.oRiJK7n0ZwGpysVZxi",
+    "ho_ten": "Trần Thị Phương",
+    "email": "phuong@truong.edu.vn",
+    "so_dien_thoai": "0923456789",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1980,
+    "trang_thai": 1
+  },
+  {
+    "id": 4,
+    "username": "hung",
+    "password": "$2y$10$YeG6nF2FtV4y09KF96yTveyrNhU0Mb6aSvDsycHMZCHoG4s45HUFq",
+    "ho_ten": "Lê Thanh Hùng",
+    "email": "hung@truong.edu.vn",
+    "so_dien_thoai": "0934567890",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1982,
+    "trang_thai": 1
+  },
+  {
+    "id": 5,
+    "username": "minh",
+    "password": "$2y$10$1E/R23EwIfWf8QQyF3lqkeNYHj.YlbVJbCVP5N523XsIxkzZBBmHC",
+    "ho_ten": "Phạm Tuấn Minh",
+    "email": "minh@truong.edu.vn",
+    "so_dien_thoai": "0945678901",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1985,
+    "trang_thai": 1
+  },
+  {
+    "id": 6,
+    "username": "lan",
+    "password": "$2y$10$9UAfLvv/OO5K19RlVGJO0e2Rl43W1JSQio4BXdGJZyDfvYKbnlPom",
+    "ho_ten": "Nguyễn Thị Lan",
+    "email": "lan@truong.edu.vn",
+    "so_dien_thoai": "0956789012",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1987,
+    "trang_thai": 1
+  },
+  {
+    "id": 7,
+    "username": "binh",
+    "password": "$2y$10$w6BFRxeRefP9zZrmdQA3qedAI0FN9XgpRcvJLSOLmV0kHXUbDEROa",
+    "ho_ten": "Trần Văn Bình",
+    "email": "binh@truong.edu.vn",
+    "so_dien_thoai": "0967890123",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1979,
+    "trang_thai": 1
+  },
+  {
+    "id": 8,
+    "username": "linh",
+    "password": "$2y$10$uM/mfghPzDzT0ZoJ5DJVQuhl3rjXwQeE04zzar9Kru9mKdgIEQ8kW",
+    "ho_ten": "Võ Thị Linh",
+    "email": "linh@truong.edu.vn",
+    "so_dien_thoai": "0978901234",
+    "vai_tro": "giangvien",
+    "nam_sinh": 1990,
+    "trang_thai": 1
+  }
+] 

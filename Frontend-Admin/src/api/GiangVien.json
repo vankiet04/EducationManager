@@ -1,0 +1,68 @@
+[
+  {
+    "id": 1,
+    "user_id": 3,
+    "ma_gv": "GV001",
+    "ho_ten": "Trần Thị Phương",
+    "bo_mon": "Công nghệ phần mềm",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Tiến sĩ",
+    "chuyen_mon": "Công nghệ phần mềm, Kiểm thử phần mềm",
+    "trang_thai": 1
+  },
+  {
+    "id": 2,
+    "user_id": 4,
+    "ma_gv": "GV002",
+    "ho_ten": "Lê Thanh Hùng",
+    "bo_mon": "Khoa học máy tính",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Tiến sĩ",
+    "chuyen_mon": "Trí tuệ nhân tạo, Machine Learning",
+    "trang_thai": 1
+  },
+  {
+    "id": 3,
+    "user_id": 5,
+    "ma_gv": "GV003",
+    "ho_ten": "Phạm Tuấn Minh",
+    "bo_mon": "Hệ thống thông tin",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Thạc sĩ",
+    "chuyen_mon": "Cơ sở dữ liệu, Data Mining",
+    "trang_thai": 1
+  },
+  {
+    "id": 4,
+    "user_id": 6,
+    "ma_gv": "GV004",
+    "ho_ten": "Nguyễn Thị Lan",
+    "bo_mon": "Mạng máy tính",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Tiến sĩ",
+    "chuyen_mon": "An toàn mạng, Điện toán đám mây",
+    "trang_thai": 1
+  },
+  {
+    "id": 5,
+    "user_id": 7,
+    "ma_gv": "GV005",
+    "ho_ten": "Trần Văn Bình",
+    "bo_mon": "Công nghệ phần mềm",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Thạc sĩ",
+    "chuyen_mon": "Phát triển Web, Mobile Computing",
+    "trang_thai": 1
+  },
+  {
+    "id": 6,
+    "user_id": 8,
+    "ma_gv": "GV006",
+    "ho_ten": "Võ Thị Linh",
+    "bo_mon": "Khoa học máy tính",
+    "khoa": "Công nghệ thông tin",
+    "trinh_do": "Thạc sĩ",
+    "chuyen_mon": "Xử lý ngôn ngữ tự nhiên, Thị giác máy tính",
+    "trang_thai": 1
+  }
+] 

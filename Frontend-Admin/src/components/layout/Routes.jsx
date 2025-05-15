@@ -2,231 +2,109 @@
 import NotFound from "../../pages/error/NotFound";
 import Dashboard from "../../pages/dashboard/Overview";
 
-// Media
-import Media from "../../pages/media/Media.jsx";
-
-// Settings
-import Api from "../../pages/settings/Api";
-import Email from "../../pages/settings/Email";
-import General from "../../pages/settings/General";
-import CronJob from "../../pages/settings/CronJob";
-import Permalink from "../../pages/settings/Permalink";
-import Languages from "../../pages/settings/Languages";
-import SocialLogin from "../../pages/settings/SocialLogin";
-
-// Products
-import Attribute from "../../pages/products/Attribute";
-import AddProduct from "../../pages/products/AddProduct";
-import EditProduct from "../../pages/products/EditProduct";
-import ManageProduct from "../../pages/products/ManageProduct";
-
-// Orders
-import AddOrder from "../../pages/orders/AddOrder";
-import ManageOrder from "../../pages/orders/ManageOrder";
-import OrderDetail from "../../pages/orders/OrderDetail";
-
-// brand
-import AddBrand from "../../pages/brands/AddBrand";
-import ManageBrand from "../../pages/brands/ManageBrand";
-import EditBrand from "../../pages/brands/EditBrand";
-
 // Customer
-import AddCustomer from "../../pages/customers/AddCustomer";
-import EditCustomer from "../../pages/customers/EditCustomer";
 import ManageCustomer from "../../pages/customers/ManageCustomer";
 
-// Users
-import AddUser from "../../pages/users/AddUser";
-import EditUser from "../../pages/users/EditUser";
-import UserList from "../../pages/users/UserList";
+// Lecturers (Giảng viên)
+import ManageLecturer from "../../pages/lecturers/ManageLecturer";
 
-// Venue
-import AddVenue from "../../pages/venue/AddVenue";
-import ManageVenue from "../../pages/venue/ManageVenue";
+// Courses (Học phần)
+import ManageCourses from "../../pages/courses/ManageCourses";
 
-// Categories
-import AddCategories from "../../pages/categories/AddCategories";
-import EditCategories from "../../pages/categories/EditCategories";
-import ManageCategories from "../../pages/categories/ManageCategories";
+// Curriculum (Khung chương trình)
+import ManageCurriculum from "../../pages/curriculum/ManageCurriculum";
 
-// Reviews
-import ManageReviews from "../../pages/reviews/ManageReviews";
-import ReviewsDetail from "../../pages/reviews/ReviewsDetail";
+// Knowledge Groups (Nhóm kiến thức)
+import ManageKnowledgeGroups from "../../pages/knowledge-groups/ManageKnowledgeGroups";
 
-// Pages
-import AddPage from "../../pages/pages/AddPage";
-import EditPage from "../../pages/pages/EditPage";
-import ManagePages from "../../pages/pages/ManagePages";
+// Curriculum Knowledge (Khung chương trình - Nhóm kiến thức)
+import ManageCurriculumKnowledge from "../../pages/curriculum-knowledge/ManageCurriculumKnowledge";
 
-// Payment
-import ManageTransactions from "../../pages/payment/ManageTransactions";
-import PaymentMethod from "../../pages/payment/PaymentMethod";
-import TransactionDetail from "../../pages/payment/TransactionDetail";
+// Syllabuses (Đề cương chi tiết)
+import ManageSyllabuses from "../../pages/syllabuses/ManageSyllabuses";
 
-// Sorting and Comments
+// Grade Columns (Cột điểm)
+import ManageGradeColumns from "../../pages/grade-columns/ManageGradeColumns";
+
+// General Information (Thông tin chung)
+import ManageGeneralInfo from "../../pages/general-info/ManageGeneralInfo";
+
+// Course Groups (Nhóm học phần)
+import ManageCourseGroups from "../../pages/course-groups/ManageCourseGroups";
+
+// Teaching Assignments (Phân công giảng dạy)
+import ManageTeachingAssignments from "../../pages/teaching-assignments/ManageTeachingAssignments";
+
+// Teaching Plan (Kế hoạch dạy học)
+import ManageTeachingPlan from "../../pages/teaching-plan/ManageTeachingPlan";
 
 const routes = [
   {
     path: "/",
     element: <Dashboard />,
   },
-  // Catalog
-  {
-    path: "/catalog/product/add",
-    element: <AddProduct />,
-  },
-  {
-    path: "/catalog/product/manage",
-    element: <ManageProduct />,
-  },
-  {
-    path: "/catalog/product/manage/:productId",
-    element: <EditProduct />,
-  },
-  {
-    path: "/catalog/product/attribute",
-    element: <Attribute />,
-  },
-  // orders
-  {
-    path: "/orders/add",
-    element: <AddOrder />,
-  },
-  {
-    path: "/orders/manage",
-    element: <ManageOrder />,
-  },
-  {
-    path: "/orders/manage/:orderID",
-    element: <OrderDetail />,
-  },
-  // Catalog Categories
-  {
-    path: "/catalog/categories/manage",
-    element: <ManageCategories />,
-  },
-  {
-    path: "/catalog/categories/:categoryid",
-    element: <EditCategories />,
-  },
-  // customers
-  {
-    path: "/customers/add",
-    element: <AddCustomer />,
-  },
+  // User Management (Quản lý người dùng)
   {
     path: "/customers/manage",
     element: <ManageCustomer />,
   },
+  // Lecturer Management (Quản lý giảng viên)
   {
-    path: "/customers/manage/:customerId",
-    element: <EditCustomer />,
+    path: "/lecturers/manage",
+    element: <ManageLecturer />,
   },
-  // brand
+  // Course Management (Quản lý học phần)
   {
-    path: "/brands/add",
-    element: <AddBrand />,
+    path: "/courses/manage",
+    element: <ManageCourses />,
   },
+  // Curriculum Management (Quản lý khung chương trình)
   {
-    path: "/brands/manage",
-    element: <ManageBrand />,
+    path: "/curriculum/manage",
+    element: <ManageCurriculum />,
   },
+  // Knowledge Group Management (Quản lý nhóm kiến thức)
   {
-    path: "/brands/manage/:brandId",
-    element: <EditBrand />,
+    path: "/knowledge-groups/manage",
+    element: <ManageKnowledgeGroups />,
   },
-  // Users
+  // Curriculum Knowledge Management (Quản lý khung chương trình - nhóm kiến thức)
   {
-    path: "/users/list",
-    element: <UserList />,
+    path: "/curriculum-knowledge/manage",
+    element: <ManageCurriculumKnowledge />,
   },
+  // Syllabus Management (Quản lý đề cương chi tiết)
   {
-    path: "/users/add",
-    element: <AddUser />,
+    path: "/syllabuses/manage",
+    element: <ManageSyllabuses />,
   },
+  // Grade Column Management (Quản lý cột điểm)
   {
-    path: "/users/list/:userid",
-    element: <EditUser />,
+    path: "/grade-columns/manage",
+    element: <ManageGradeColumns />,
   },
-  // Venue
+  // General Information (Thông tin chung)
   {
-    path: "/venue/add",
-    element: <AddVenue />,
+    path: "/general-info/manage",
+    element: <ManageGeneralInfo />,
   },
+  // Course Group Management (Quản lý nhóm học phần)
   {
-    path: "/venue/manage",
-    element: <ManageVenue />,
+    path: "/course-groups/manage",
+    element: <ManageCourseGroups />,
   },
-  // Reviews
+  // Teaching Assignment Management (Phân công giảng dạy)
   {
-    path: "/reviews",
-    element: <ManageReviews />,
+    path: "/teaching-assignments/manage",
+    element: <ManageTeachingAssignments />,
   },
+  // Teaching Plan Management (Kế hoạch dạy học)
   {
-    path: "/reviews/:reviewid",
-    element: <ReviewsDetail />,
+    path: "/teaching-plan/manage",
+    element: <ManageTeachingPlan />,
   },
-  // Pages
-  {
-    path: "/pages",
-    element: <ManagePages />,
-  },
-  {
-    path: "/pages/add",
-    element: <AddPage />,
-  },
-  {
-    path: "/pages/:pageId",
-    element: <EditPage />,
-  },
-  // Payment
-  {
-    path: "/payment/transactions",
-    element: <ManageTransactions />,
-  },
-  {
-    path: "/payment/transactions/:transactionId",
-    element: <TransactionDetail />,
-  },
-  {
-    path: "/payment/payment-method",
-    element: <PaymentMethod />,
-  },
-  // Media
-  {
-    path: "/media",
-    element: <Media />,
-  },
-  // Settings
-  {
-    path: "/setting/general",
-    element: <General />,
-  },
-  {
-    path: "/setting/email",
-    element: <Email />,
-  },
-  {
-    path: "/setting/cronJob",
-    element: <CronJob />,
-  },
-  {
-    path: "/setting/permalink",
-    element: <Permalink />,
-  },
-  {
-    path: "/setting/languages",
-    element: <Languages />,
-  },
-  {
-    path: "/setting/social-login",
-    element: <SocialLogin />,
-  },
-  {
-    path: "/setting/api",
-    element: <Api />,
-  },
-  // Not Found
+  // Add routes for education management
+  // Error pages
   {
     path: "*",
     element: <NotFound />,

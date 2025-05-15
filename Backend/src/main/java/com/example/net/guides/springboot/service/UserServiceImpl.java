@@ -1,25 +1,28 @@
 package com.example.net.guides.springboot.service;
 import com.example.net.guides.springboot.dto.UserDto;
-import com.example.net.guides.springboot.model.Role;
+import com.example.net.guides.springboot.model.GiangVien;
 import com.example.net.guides.springboot.model.User;
+import com.example.net.guides.springboot.repository.GiangVienRepository;
 import com.example.net.guides.springboot.repository.UserRepository;
 import com.example.net.guides.springboot.service.UserService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
-import com.example.net.guides.springboot.repository.RoleRepository;
-import java.util.ArrayList;
+
+import jakarta.transaction.Transactional;
+
 import java.util.List;
+import java.util.Optional;
 
 @Service
 public class UserServiceImpl implements UserService {
 
     @Autowired
     private UserRepository userRepository;
-
+    
     @Autowired
-    private RoleRepository roleRepository;
+    private GiangVienRepository giangVienRepository;
 
     @Autowired
     private PasswordEncoder passwordEncoder;
@@ -33,16 +36,15 @@ public class UserServiceImpl implements UserService {
         user.setEmail(userDto.getEmail());
         user.setSoDienThoai(userDto.getSoDienThoai());
         user.setNamSinh(userDto.getNamSinh());
+        user.setTrangThai(true); // Default to active
         
-        List<Role> roles = new ArrayList<>();
-        for (int i = 0; i < userDto.getRoles().size(); i++) {
-            String current_role = userDto.getRoles().get(i).getName();
-            Role role = roleRepository.findByName(userDto.getRoles().get(i).getName())
-                    .orElseThrow(() -> new RuntimeException("Role không tồn tại: " + current_role));
-            roles.add(role);
+        // Set vai_tro with default if not provided
+        if (userDto.getVaiTro() == null || userDto.getVaiTro().isEmpty()) {
+            user.setVaiTro("NGUOI_DUNG"); // Default role
+        } else {
+            user.setVaiTro(userDto.getVaiTro());
         }
 
-        user.setRoles(roles);
         userRepository.save(user);
     }
 
@@ -54,5 +56,74 @@ public class UserServiceImpl implements UserService {
     @Override
     public User save(User user) {
         return userRepository.save(user);
+    }
+    
+    @Override
+    public List<User> findAllUsers() {
+        return userRepository.findAll();
+    }
+    
+    @Override
+    public boolean isUserLecturer(Integer userId) {
+        // Check if user has lecturer role
+        User user = userRepository.findById(userId).orElse(null);
+        if (user == null) return false;
+        
+        boolean hasLecturerRole = "GIANG_VIEN".equals(user.getVaiTro());
+                
+        // Check if user is associated with a GiangVien entity
+        GiangVien giangVien = giangVienRepository.findByUserId(userId);
+        
+        return hasLecturerRole && giangVien != null;
+    }
+    
+    @Override
+    @Transactional
+    public User updateUser(Integer userId, UserDto userDto) {
+        User existingUser = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User không tìm thấy với ID: " + userId));
+        
+        // Update basic user info
+        existingUser.setHoTen(userDto.getHoTen());
+        existingUser.setEmail(userDto.getEmail());
+        existingUser.setSoDienThoai(userDto.getSoDienThoai());
+        existingUser.setNamSinh(userDto.getNamSinh());
+        
+        // Update password if provided
+        if (userDto.getPassword() != null && !userDto.getPassword().isEmpty()) {
+            existingUser.setPassword(passwordEncoder.encode(userDto.getPassword()));
+        }
+        
+        // Update role if provided
+        if (userDto.getVaiTro() != null && !userDto.getVaiTro().isEmpty()) {
+            existingUser.setVaiTro(userDto.getVaiTro());
+        }
+        
+        // Update trang_thai if provided
+        if (userDto.getTrangThai() != null) {
+            existingUser.setTrangThai(userDto.getTrangThai());
+        }
+        
+        return userRepository.save(existingUser);
+    }
+    
+    @Override
+    public Optional<User> findUserById(Integer userId) {
+        return userRepository.findById(userId);
+    }
+    
+    @Override
+    @Transactional
+    public void deleteUser(Integer userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User không tìm thấy với ID: " + userId));
+        
+        // Check if user is a lecturer and delete the lecturer record first
+        GiangVien giangVien = giangVienRepository.findByUserId(userId);
+        if (giangVien != null) {
+            giangVienRepository.delete(giangVien);
+        }
+        
+        userRepository.delete(user);
     }
 }

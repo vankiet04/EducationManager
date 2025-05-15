@@ -1,7 +1,6 @@
 package com.example.net.guides.springboot.repository;
 
 import com.example.net.guides.springboot.model.OutlineDetail;
-import com.example.net.guides.springboot.model.Role;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 

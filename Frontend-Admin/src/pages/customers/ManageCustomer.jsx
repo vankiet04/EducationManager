@@ -1,220 +1,471 @@
-import * as Icons from "react-icons/tb";
-import Customers from "../../api/Customers.json";
-import React, { useState, useEffect } from "react";
-import { Link, useNavigate } from "react-router-dom";
-import Input from "../../components/common/Input.jsx";
-import Badge from "../../components/common/Badge.jsx";
-import Button from "../../components/common/Button.jsx";
-import CheckBox from "../../components/common/CheckBox.jsx";
-import Dropdown from "../../components/common/Dropdown.jsx";
-import Pagination from "../../components/common/Pagination.jsx";
-import TableAction from "../../components/common/TableAction.jsx";
-import SelectOption from "../../components/common/SelectOption.jsx";
+// ManageCustomer.jsx - Trang quản lý người dùng
+import React, { useState, useEffect } from 'react';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Dropdown, Menu } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
+  LockOutlined, UnlockOutlined, ReloadOutlined, EyeOutlined, EllipsisOutlined, FilterOutlined, InfoCircleOutlined, 
+  TeamOutlined } from '@ant-design/icons';
+import axios from 'axios';
+
+const { Title } = Typography;
+const { Option } = Select;
 
 const ManageCustomer = () => {
-  const [bulkCheck, setBulkCheck] = useState(false);
-  const [specificChecks, setSpecificChecks] = useState({});
-  const navigate = useNavigate();
-  const [currentPage, setCurrentPage] = useState(1);
-  const [selectedValue, setSelectedValue] = useState(5);
-  const [tableRow, setTableRow] = useState([
-    { value: 2, label: "2" },
-    { value: 5, label: "5" },
-    { value: 10, label: "10" },
-  ]);
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [searchText, setSearchText] = useState('');
+  const [detailUser, setDetailUser] = useState(null);
+  const [form] = Form.useForm();
 
-  const customer = Customers;
+  // Fetch data on component mount
+  useEffect(() => {
+    fetchUsers();
+  }, []);
 
-  const bulkAction = [
-    { value: "delete", label: "Delete" },
-    { value: "category", label: "Category" },
-    { value: "status", label: "Status" },
+  // Fetch user data from backend API
+  const fetchUsers = async () => {
+    setLoading(true);
+    try {
+      const response = await axios.get('http://localhost:8080/api/user');
+      setUsers(response.data);
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching users:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể tải danh sách người dùng'
+      });
+      setLoading(false);
+    }
+  };
+
+  // Handle viewing a user
+  const handleViewDetail = (record) => {
+    setDetailUser(record);
+    setIsDetailModalVisible(true);
+  };
+
+  // Handle editing a user
+  const handleEdit = (record) => {
+    setEditingId(record.id);
+    form.setFieldsValue({
+      username: record.username,
+      hoTen: record.hoTen,
+      email: record.email,
+      soDienThoai: record.soDienThoai,
+      namSinh: record.namSinh,
+      trangThai: record.trangThai,
+      roles: record.roles?.map(role => role.name)
+    });
+    setIsModalVisible(true);
+  };
+
+  // Handle deleting a user
+  const handleDelete = async (userId) => {
+    Modal.confirm({
+      title: 'Xác nhận xóa',
+      content: 'Bạn có chắc chắn muốn xóa người dùng này?',
+      onOk: async () => {
+        try {
+          setLoading(true);
+          // In a real application, you'd call an API to delete the user
+          // await axios.delete(`http://localhost:8080/api/user/${userId}`);
+          fetchUsers(); // Refresh the user list
+        } catch (error) {
+          console.error('Error deleting user:', error);
+          Modal.error({
+            content: 'Không thể xóa người dùng'
+          });
+          setLoading(false);
+        }
+      }
+    });
+  };
+
+  // Handle toggling user status
+  const handleToggleStatus = async (record) => {
+    try {
+      setLoading(true);
+      const newStatus = !record.trangThai;
+      
+      // In a real application, you'd call an API to update the status
+      // await axios.patch(`http://localhost:8080/api/user/${record.id}`, { trangThai: newStatus });
+      fetchUsers(); // Refresh the user list
+    } catch (error) {
+      console.error('Error updating user status:', error);
+      Modal.error({
+        content: 'Không thể cập nhật trạng thái người dùng'
+      });
+      setLoading(false);
+    }
+  };
+
+  // Handle form submit (add/edit user)
+  const handleSubmit = async (values) => {
+    try {
+      setLoading(true);
+      
+      if (editingId) {
+        // In a real application, you'd call an API to update the user
+        // await axios.put(`http://localhost:8080/api/user/${editingId}`, values);
+      } else {
+        // In a real application, you'd call an API to add a new user
+        // await axios.post('http://localhost:8080/api/user', values);
+      }
+      
+      setIsModalVisible(false);
+      fetchUsers(); // Refresh the user list
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      Modal.error({
+        content: 'Không thể lưu thông tin người dùng'
+      });
+      setLoading(false);
+    }
+  };
+
+  // Handle search input change
+  const handleSearch = (e) => {
+    setSearchText(e.target.value);
+  };
+
+  // Filter data based on search text
+  const filteredData = searchText
+    ? users.filter(user => 
+        (user.username && user.username.toLowerCase().includes(searchText.toLowerCase())) ||
+        (user.hoTen && user.hoTen.toLowerCase().includes(searchText.toLowerCase())) ||
+        (user.email && user.email.toLowerCase().includes(searchText.toLowerCase())) ||
+        (user.soDienThoai && user.soDienThoai.toLowerCase().includes(searchText.toLowerCase()))
+      )
+    : users;
+
+  // Define table columns
+  const columns = [
+    {
+      title: 'ID',
+      dataIndex: 'id',
+      key: 'id',
+      width: 60,
+      sorter: true,
+    },
+    {
+      title: 'Tên đăng nhập',
+      dataIndex: 'username',
+      key: 'username',
+      width: 150,
+      sorter: true,
+    },
+    {
+      title: 'Họ và tên',
+      dataIndex: 'hoTen',
+      key: 'hoTen',
+      width: 200,
+      sorter: true,
+    },
+    {
+      title: 'Email',
+      dataIndex: 'email',
+      key: 'email',
+      width: 200,
+      sorter: true,
+    },
+    {
+      title: 'Số điện thoại',
+      dataIndex: 'soDienThoai',
+      key: 'soDienThoai',
+      width: 150,
+    },
+    {
+      title: 'Vai trò',
+      dataIndex: 'roles',
+      key: 'roles',
+      width: 150,
+      render: (roles) => (
+        <span>
+          {roles && roles.map(role => (
+            <Tag color="blue" key={role.id}>
+              {role.name.replace('ROLE_', '')}
+            </Tag>
+          ))}
+        </span>
+      ),
+    },
+    {
+      title: 'Năm sinh',
+      dataIndex: 'namSinh',
+      key: 'namSinh',
+      width: 120,
+      sorter: true,
+    },
+    {
+      title: 'Trạng thái',
+      dataIndex: 'trangThai',
+      key: 'trangThai',
+      width: 120,
+      render: (trangThai) => (
+        <Tag color={trangThai ? 'green' : 'red'}>
+          {trangThai ? 'Hoạt động' : 'Vô hiệu hóa'}
+        </Tag>
+      ),
+    },
+    {
+      title: 'Thao tác',
+      key: 'action',
+      width: 280,
+      className: 'action-column',
+      render: (_, record) => (
+        <Space size="small" className="action-buttons">
+          <Button 
+            type="primary" 
+            icon={<EditOutlined />} 
+            onClick={() => handleEdit(record)}
+          >
+            Sửa
+          </Button>
+          <Button 
+            danger 
+            icon={<DeleteOutlined />} 
+            onClick={() => handleDelete(record.id)}
+          >
+            Xóa
+          </Button>
+          <Button
+            type={record.trangThai ? 'default' : 'primary'}
+            onClick={() => handleToggleStatus(record)}
+          >
+            {record.trangThai ? 'Vô hiệu' : 'Kích hoạt'}
+          </Button>
+          <Button
+            icon={<InfoCircleOutlined />}
+            onClick={() => handleViewDetail(record)}
+          />
+        </Space>
+      ),
+    },
   ];
 
-  const bulkActionDropDown = (selectedOption) => {
-    console.log(selectedOption);
-  };
-
-  const onPageChange = (newPage) => {
-    setCurrentPage(newPage);
-  };
-
-  const handleBulkCheckbox = (isCheck) => {
-    setBulkCheck(isCheck);
-    if (isCheck) {
-      const updateChecks = {};
-      customer.forEach((customer) => {
-        updateChecks[customer.id] = true;
-      });
-      setSpecificChecks(updateChecks);
-    } else {
-      setSpecificChecks({});
-    }
-  };
-
-  const handleCheckCustomer = (isCheck, id) => {
-    setSpecificChecks((prevSpecificChecks) => ({
-      ...prevSpecificChecks,
-      [id]: isCheck,
-    }));
-  };
-
-  const showTableRow = (selectedOption) => {
-    setSelectedValue(selectedOption.label);
-  };
-
-
-  const actionItems = ["Delete", "edit"];
-
-  const handleActionItemClick = (item, itemID) => {
-    var updateItem = item.toLowerCase();
-    if (updateItem === "delete") {
-      alert(`#${itemID} item delete`);
-    } else if (updateItem === "edit") {
-      navigate(`/customers/manage/${itemID}`);
-    }
-  };
-
-
+  // Main component render
   return (
-    <section className="customer">
-      <div className="container">
-        <div className="wrapper">
-          <div className="content transparent">
-            <div className="content_head">
-              <Dropdown
-                placeholder="Bulk Action"
-                className="sm"
-                onClick={bulkActionDropDown}
-                options={bulkAction}
-              />
+    <Card>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '16px' }}>
+        <Title level={2} style={{ color: '#1890ff' }}>
+          QUẢN LÝ NGƯỜI DÙNG
+          <TeamOutlined style={{ marginLeft: '10px' }} />
+        </Title>
+        <Space wrap>
               <Input
-                placeholder="Search Customer..."
-                className="sm table_search"
-              />
-              <div className="btn_parent">
-                <Link to="/customers/add" className="sm button">
-                  <Icons.TbPlus />
-                  <span>Create Customer</span>
-                </Link>
-                <Button label="Advance Filter" className="sm" />
-                <Button label="save" className="sm" />
-              </div>
+            placeholder="Tìm kiếm theo tên, email..."
+            prefix={<SearchOutlined />}
+            style={{ width: 300 }}
+            onChange={handleSearch}
+            allowClear
+          />
+          <Button 
+            type="primary"
+            icon={<PlusOutlined />}
+            onClick={() => {
+              setEditingId(null);
+              form.resetFields();
+              form.setFieldsValue({
+                trangThai: true
+              });
+              setIsModalVisible(true);
+            }}
+          >
+            Thêm người dùng
+          </Button>
+          <Button
+            icon={<ReloadOutlined />}
+            onClick={fetchUsers}
+          >
+            Làm mới
+          </Button>
+        </Space>
             </div>
-            <div className="content_body">
-              <div className="table_responsive">
-                <table className="separate">
-                  <thead>
-                    <tr>
-                      <th className="td_checkbox">
-                        <CheckBox
-                          onChange={handleBulkCheckbox}
-                          isChecked={bulkCheck}
-                        />
-                      </th>
-                      <th className="td_id">id</th>
-                      <th className="td_image">image</th>
-                      <th colSpan="4">name</th>
-                      <th>email</th>
-                      <th>orders</th>
-                      <th className="td_status">status</th>
-                      <th className="td_date">created at</th>
-                      <th>actions</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {customer.map((customer, key) => {
-                      return (
-                        <tr key={key}>
-                          <td className="td_checkbox">
-                            <CheckBox
-                              onChange={(isCheck) =>
-                                handleCheckCustomer(isCheck, customer.id)
-                              }
-                              isChecked={specificChecks[customer.id] || false}
-                            />
-                          </td>
-                          <td className="td_id">{customer.id}</td>
-                          <td className="td_image">
-                            <img
-                              src={`${customer.image}${customer.name}`}
-                              alt={customer.name}
-                            />
-                          </td>
-                          <td colSpan="4">
-                            <Link to={customer.id.toString()}>{customer.name}</Link>
-                          </td>
-                          <td>{customer.contact.email}</td>
-                          <td>{customer.purchase_history.length}</td>
-                          <td className="td_status">
-                            {customer.status.toLowerCase() === "active" ||
-                             customer.status.toLowerCase() === "completed" ||
-                             customer.status.toLowerCase() === "new" ||
-                             customer.status.toLowerCase() === "coming soon" ? (
-                               <Badge
-                                 label={customer.status}
-                                 className="light-success"
-                               />
-                             ) : customer.status.toLowerCase() === "inactive" ||
-                               customer.status.toLowerCase() === "out of stock" ||
-                               customer.status.toLowerCase() === "locked" ||
-                               customer.status.toLowerCase() === "discontinued" ? (
-                               <Badge
-                                 label={customer.status}
-                                 className="light-danger"
-                               />
-                             ) : customer.status.toLowerCase() === "on sale" ||
-                                 customer.status.toLowerCase() === "featured" ||
-                                 customer.status.toLowerCase() === "pending" ? (
-                               <Badge
-                                 label={customer.status}
-                                 className="light-warning"
-                               />
-                             ) : customer.status.toLowerCase() === "archive" ||
-                                 customer.status.toLowerCase() === "pause" ? (
-                               <Badge
-                                 label={customer.status}
-                                 className="light-secondary"
-                               />
-                             ) : (
-                               ""
-                             )}
-                          </td>
-                          <td className="td_date">{customer.createdAt}</td>
-                          
-                          <td className="td_action">
-                            <TableAction
-                              actionItems={actionItems}
-                              onActionItemClick={(item) =>
-                                handleActionItemClick(item, customer.id)
-                              }
-                            />
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            <div className="content_footer">
-              <Dropdown
-                className="top show_rows sm"
-                placeholder="please select"
-                selectedValue={selectedValue}
-                onClick={showTableRow}
-                options={tableRow}
-              />
-              <Pagination
-                currentPage={currentPage}
-                totalPages={5}
-                onPageChange={onPageChange}
+
+      <div className="table-container" style={{ width: '100%', overflowX: 'auto' }}>
+        <Table 
+          columns={columns} 
+          dataSource={filteredData} 
+          rowKey="id" 
+          loading={loading}
+          scroll={{ x: 'max-content' }}
               />
             </div>
+
+      {/* Modal xem chi tiết */}
+      <Modal
+        title="Chi tiết người dùng"
+        open={isDetailModalVisible}
+        onCancel={() => setIsDetailModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsDetailModalVisible(false)}>
+            Đóng
+          </Button>,
+          <Button 
+            key="edit" 
+            type="primary" 
+            onClick={() => {
+              setIsDetailModalVisible(false);
+              handleEdit(detailUser);
+            }}
+          >
+            Chỉnh sửa
+          </Button>
+        ]}
+        width={600}
+      >
+        {detailUser && (
+          <div style={{ padding: '16px' }}>
+            <p><strong>ID:</strong> {detailUser.id}</p>
+            <p><strong>Tên đăng nhập:</strong> {detailUser.username}</p>
+            <p><strong>Họ và tên:</strong> {detailUser.hoTen}</p>
+            <p><strong>Email:</strong> {detailUser.email}</p>
+            <p><strong>Số điện thoại:</strong> {detailUser.soDienThoai}</p>
+            <p><strong>Năm sinh:</strong> {detailUser.namSinh}</p>
+            <p>
+              <strong>Vai trò:</strong>{' '}
+              {detailUser.roles && detailUser.roles.map(role => (
+                <Tag color="blue" key={role.id}>
+                  {role.name.replace('ROLE_', '')}
+                </Tag>
+              ))}
+            </p>
+            <p>
+              <strong>Trạng thái:</strong>{' '}
+              <Tag color={detailUser.trangThai ? 'green' : 'red'}>
+                {detailUser.trangThai ? 'Hoạt động' : 'Vô hiệu hóa'}
+              </Tag>
+            </p>
           </div>
-        </div>
-      </div>
-    </section>
+        )}
+      </Modal>
+
+      {/* Modal thêm/sửa */}
+      <Modal
+        title={editingId ? "Sửa thông tin người dùng" : "Thêm người dùng mới"}
+        open={isModalVisible}
+        onCancel={() => {
+          setIsModalVisible(false);
+          form.resetFields();
+        }}
+        footer={null}
+        maskClosable={false}
+        width={600}
+      >
+        <Form
+          form={form}
+          layout="vertical"
+          onFinish={handleSubmit}
+        >
+          <Form.Item
+            name="username"
+            label="Tên đăng nhập"
+            rules={[{ required: true, message: 'Vui lòng nhập tên đăng nhập!' }]}
+          >
+            <Input disabled={!!editingId} />
+          </Form.Item>
+          
+          {!editingId && (
+            <Form.Item
+              name="password"
+              label="Mật khẩu"
+              rules={[{ required: !editingId, message: 'Vui lòng nhập mật khẩu!' }]}
+            >
+              <Input.Password />
+            </Form.Item>
+          )}
+          
+          <Form.Item
+            name="hoTen"
+            label="Họ và tên"
+            rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="email"
+            label="Email"
+            rules={[
+              { required: true, message: 'Vui lòng nhập email!' },
+              { type: 'email', message: 'Email không hợp lệ!' }
+            ]}
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="soDienThoai"
+            label="Số điện thoại"
+          >
+            <Input />
+          </Form.Item>
+          
+          <Form.Item
+            name="namSinh"
+            label="Năm sinh"
+          >
+            <Input type="number" />
+          </Form.Item>
+          
+          <Form.Item
+            name="roles"
+            label="Vai trò"
+          >
+            <Select mode="multiple" placeholder="Chọn vai trò">
+              <Option value="ROLE_ADMIN">Admin</Option>
+              <Option value="ROLE_USER">User</Option>
+              <Option value="ROLE_MANAGER">Manager</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item
+            name="trangThai"
+            label="Trạng thái"
+            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
+          >
+            <Select>
+              <Option value={true}>Hoạt động</Option>
+              <Option value={false}>Vô hiệu hóa</Option>
+            </Select>
+          </Form.Item>
+          
+          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+            <Space>
+              <Button 
+                onClick={() => {
+                  setIsModalVisible(false);
+                  form.resetFields();
+                }}
+              >
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                {editingId ? 'Cập nhật' : 'Thêm mới'}
+              </Button>
+            </Space>
+          </Form.Item>
+        </Form>
+      </Modal>
+      
+      <style jsx global>{`
+        .table-container {
+          width: 100%;
+          overflow-x: auto;
+          margin-bottom: 16px;
+        }
+        .action-column {
+          background: white;
+          box-shadow: 0 0 4px rgba(0, 0, 0, 0.03);
+        }
+        .action-buttons {
+          white-space: nowrap;
+        }
+      `}</style>
+    </Card>
   );
 };
 
