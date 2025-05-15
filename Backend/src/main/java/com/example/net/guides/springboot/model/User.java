@@ -46,13 +46,8 @@ public class User {
     @Column(name = "trang_thai")
     private Boolean trangThai;
     
-    @ManyToMany(fetch = FetchType.EAGER)
-    @JoinTable(
-        name = "user_roles",
-        joinColumns = @JoinColumn(name = "user_id"),
-        inverseJoinColumns = @JoinColumn(name = "role_id")
-    )
-    private List<Role> roles = new ArrayList<>();
+    @Column(name = "vai_tro", length = 50)
+    private String vaiTro;
 
     public User() {
     }
@@ -112,7 +107,6 @@ public class User {
         this.soDienThoai = soDienThoai;
     }
     
-    
     public Integer getNamSinh() {
         return namSinh;
     }
@@ -129,15 +123,11 @@ public class User {
         this.trangThai = trangThai;
     }
     
-    public List<Role> getRoles() {
-        return roles;
+    public String getVaiTro() {
+        return vaiTro;
     }
     
-    public void setRoles(List<Role> roles) {
-        this.roles = roles;
-    }
-    
-    public void addRole(Role role) {
-        this.roles.add(role);
+    public void setVaiTro(String vaiTro) {
+        this.vaiTro = vaiTro;
     }
 }

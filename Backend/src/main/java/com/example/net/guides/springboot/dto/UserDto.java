@@ -1,8 +1,5 @@
 package com.example.net.guides.springboot.dto;
 
-import java.util.ArrayList;
-import java.util.List;
-
 public class UserDto {
 
     private String username;
@@ -15,9 +12,11 @@ public class UserDto {
     
     private String soDienThoai;
     
-    private List<DTO_Role> roles = new ArrayList<>();
+    private String vaiTro;
     
     private Integer namSinh;
+    
+    private Boolean trangThai;
 
     public String getUsername() {
         return username;
@@ -59,12 +58,12 @@ public class UserDto {
         this.soDienThoai = soDienThoai;
     }
 
-    public List<DTO_Role> getRoles() {
-        return roles;
+    public String getVaiTro() {
+        return vaiTro;
     }
 
-    public void setRoles(List<DTO_Role> roles) {
-        this.roles = roles;
+    public void setVaiTro(String vaiTro) {
+        this.vaiTro = vaiTro;
     }
 
     public Integer getNamSinh() {
@@ -73,5 +72,13 @@ public class UserDto {
 
     public void setNamSinh(Integer namSinh) {
         this.namSinh = namSinh;
+    }
+    
+    public Boolean getTrangThai() {
+        return trangThai;
+    }
+    
+    public void setTrangThai(Boolean trangThai) {
+        this.trangThai = trangThai;
     }
 }

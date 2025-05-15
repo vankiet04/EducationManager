@@ -1896,3 +1896,17 @@ d1iv[class^="column_"]>* {
     max-width: 100%;
   }
 }
+
+/* Action column styles */
+.action-column {
+  position: sticky;
+  right: 0;
+  z-index: 2;
+  background-color: white;
+  box-shadow: -5px 0 10px rgba(0, 0, 0, 0.05);
+}
+
+.action-buttons {
+  display: flex;
+  justify-content: center;
+}
