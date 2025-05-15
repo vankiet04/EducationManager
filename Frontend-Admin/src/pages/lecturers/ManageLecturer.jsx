@@ -1,13 +1,34 @@
 // ManageLecturer.jsx - Trang quản lý giảng viên
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Dropdown, Menu, Tooltip } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  LockOutlined, UnlockOutlined, ReloadOutlined, EyeOutlined, EllipsisOutlined } from '@ant-design/icons';
-import GiangVienData from '../../api/GiangVien.json';
-import UsersData from '../../api/Users.json';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title } = Typography;
 const { Option } = Select;
+
+// API base URL
+const API_URL = 'http://localhost:8080/api';
+
+// Thiết lập cấu hình global cho axios
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+// Thêm interceptor để xử lý lỗi từ API
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+      // Show error message to user
+      message.error(error.response.data.message || 'Có lỗi xảy ra');
+    }
+    return Promise.reject(error);
+  }
+);
 
 const ManageLecturer = () => {
   const [lecturers, setLecturers] = useState([]);
@@ -27,108 +48,105 @@ const ManageLecturer = () => {
   const fetchLecturers = async () => {
     setLoading(true);
     try {
-      // In a real application, you'd fetch this data from an API
-      setTimeout(() => {
-        // Combine lecturer data with user data
-        const lecturersWithUserInfo = GiangVienData.map(lecturer => {
-          const user = UsersData.find(user => user.id === lecturer.user_id);
-          return {
-            ...lecturer,
-            user_email: user ? user.email : 'N/A',
-            user_username: user ? user.username : 'N/A'
-          };
-        });
-        
-        setLecturers(lecturersWithUserInfo);
-        
-        // Find users that don't have a lecturer account yet
-        const usedUserIds = GiangVienData.map(lecturer => lecturer.user_id);
-        const availableUsersList = UsersData.filter(user => 
-          !usedUserIds.includes(user.id) && user.vai_tro === 'giangvien'
-        );
-        
-        setAvailableUsers(availableUsersList);
-        setLoading(false);
-      }, 500);
+      // Fetch lecturers from API
+      const lecturersResponse = await axios.get('/giangvien');
+      const lecturersData = lecturersResponse.data.filter(lecturer => lecturer.trangThai === 1); // Only get active lecturers
+      
+      // Fetch users from API
+      const usersResponse = await axios.get('/user');
+      const usersData = usersResponse.data;
+      
+      // Combine lecturer data with user data
+      const lecturersWithUserInfo = lecturersData.map(lecturer => {
+        const user = usersData.find(user => user.id === lecturer.userId);
+        return {
+          ...lecturer,
+          user_email: user ? user.email : 'N/A',
+          user_username: user ? user.username : 'N/A',
+          user_hoTen: user ? user.hoTen : 'N/A'
+        };
+      });
+      
+      setLecturers(lecturersWithUserInfo);
+      
+      // Find users that don't have a lecturer account yet
+      const usedUserIds = lecturersData.map(lecturer => lecturer.userId);
+      const availableUsersList = usersData.filter(user => 
+        !usedUserIds.includes(user.id) && user.vaiTro === 'GIANG_VIEN'
+      );
+      
+      setAvailableUsers(availableUsersList);
     } catch (error) {
       console.error('Error fetching lecturers:', error);
-      Modal.error({
-        title: 'Lỗi',
-        content: 'Không thể tải danh sách giảng viên'
-      });
+      message.error('Không thể tải danh sách giảng viên');
+    } finally {
       setLoading(false);
     }
   };
 
   // Handle editing a lecturer
-  const handleEdit = (record) => {
-    setEditingId(record.id);
-    form.setFieldsValue({
-      ma_gv: record.ma_gv,
-      ho_ten: record.ho_ten,
-      bo_mon: record.bo_mon,
-      khoa: record.khoa,
-      trinh_do: record.trinh_do,
-      chuyen_mon: record.chuyen_mon,
-      user_id: record.user_id,
-      trang_thai: record.trang_thai
-    });
-    setIsModalVisible(true);
+  const handleEdit = async (record) => {
+    try {
+      setLoading(true);
+      const response = await axios.get(`/giangvien/${record.id}`);
+      const lecturerData = response.data;
+      
+      setEditingId(record.id);
+      form.setFieldsValue({
+        maGiangVien: lecturerData.maGiangVien,
+        hoTen: lecturerData.hoTen,
+        boMon: lecturerData.boMon,
+        khoa: lecturerData.khoa,
+        trinhDo: lecturerData.trinhDo,
+        chuyenMon: lecturerData.chuyenMon,
+        userId: lecturerData.userId,
+        trangThai: lecturerData.trangThai
+      });
+      setIsModalVisible(true);
+    } catch (error) {
+      console.error('Error fetching lecturer details:', error);
+      message.error('Không thể tải thông tin giảng viên');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle deleting a lecturer
   const handleDelete = async (lecturerId) => {
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc chắn muốn xóa giảng viên này?',
+      title: 'Xác nhận xoá giảng viên',
+      content: 'Bạn có chắc chắn muốn xoá hóa giảng viên này? Giảng viên sẽ không còn hiển thị trong danh sách.',
+      okText: 'Xác nhận',
+      cancelText: 'Hủy',
       onOk: async () => {
         try {
           setLoading(true);
-          // In a real application, you'd call an API to delete the lecturer
-          setTimeout(() => {
-            const updatedLecturers = lecturers.filter(lecturer => lecturer.id !== lecturerId);
-            setLecturers(updatedLecturers);
-            Modal.success({
-              content: 'Xóa giảng viên thành công'
-            });
-            setLoading(false);
-          }, 500);
+          const lecturer = lecturers.find(l => l.id === lecturerId);
+          const updatedLecturer = { ...lecturer, trangThai: 0 };
+          await axios.put(`/giangvien/${lecturerId}`, updatedLecturer);
+          message.success('Xoá hóa giảng viên thành công');
+          fetchLecturers();
         } catch (error) {
-          console.error('Error deleting lecturer:', error);
-          Modal.error({
-            content: 'Không thể xóa giảng viên'
-          });
+          console.error('Error deactivating lecturer:', error);
+          message.error('Không thể xoá hóa giảng viên');
+        } finally {
           setLoading(false);
         }
       }
     });
   };
 
-  // Handle toggling lecturer status
-  const handleToggleStatus = async (record) => {
+  // Handle assigning user to lecturer
+  const handleAssignUser = async (lecturerId, userId) => {
     try {
       setLoading(true);
-      const newStatus = record.trang_thai === 1 ? 0 : 1;
-      
-      // In a real application, you'd call an API to update the status
-      setTimeout(() => {
-        const updatedLecturers = lecturers.map(lecturer => {
-          if (lecturer.id === record.id) {
-            return { ...lecturer, trang_thai: newStatus };
-          }
-          return lecturer;
-        });
-        setLecturers(updatedLecturers);
-        Modal.success({
-          content: `Giảng viên đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`
-        });
-        setLoading(false);
-      }, 500);
+      await axios.post(`/giangvien/${lecturerId}/assign-user/${userId}`);
+      message.success('Gán tài khoản cho giảng viên thành công');
+      fetchLecturers(); // Refresh the list
     } catch (error) {
-      console.error('Error updating lecturer status:', error);
-      Modal.error({
-        content: 'Không thể cập nhật trạng thái giảng viên'
-      });
+      console.error('Error assigning user:', error);
+      message.error('Không thể gán tài khoản cho giảng viên');
+    } finally {
       setLoading(false);
     }
   };
@@ -138,64 +156,35 @@ const ManageLecturer = () => {
     try {
       setLoading(true);
       
+      const lecturerData = {
+        id: editingId || null,
+        maGiangVien: values.maGiangVien,
+        hoTen: values.hoTen,
+        boMon: values.boMon,
+        khoa: values.khoa,
+        trinhDo: values.trinhDo,
+        chuyenMon: values.chuyenMon,
+        userId: values.userId,
+        trangThai: 1 // Always set to active
+      };
+      
       if (editingId) {
-        // In a real application, you'd call an API to update the lecturer
-        setTimeout(() => {
-          const updatedLecturers = lecturers.map(lecturer => {
-            if (lecturer.id === editingId) {
-              // Find the user associated with this lecturer
-              const user = UsersData.find(u => u.id === parseInt(values.user_id));
-              return { 
-                ...lecturer, 
-                ...values,
-                user_id: parseInt(values.user_id),
-                user_email: user ? user.email : 'N/A',
-                user_username: user ? user.username : 'N/A'
-              };
-            }
-            return lecturer;
-          });
-          setLecturers(updatedLecturers);
-          setIsModalVisible(false);
-          Modal.success({
-            content: 'Cập nhật giảng viên thành công'
-          });
-          setLoading(false);
-        }, 500);
+        // Update existing lecturer
+        await axios.put(`/giangvien/${editingId}`, lecturerData);
+        message.success('Cập nhật giảng viên thành công');
       } else {
-        // In a real application, you'd call an API to add a new lecturer
-        setTimeout(() => {
-          // Find the user associated with this lecturer
-          const user = UsersData.find(u => u.id === parseInt(values.user_id));
-          const newLecturer = {
-            id: Math.max(...lecturers.map(l => l.id), 0) + 1,
-            ...values,
-            user_id: parseInt(values.user_id),
-            user_email: user ? user.email : 'N/A',
-            user_username: user ? user.username : 'N/A'
-          };
-          const updatedLecturers = [...lecturers, newLecturer];
-          setLecturers(updatedLecturers);
-          
-          // Update the list of available users
-          const newUsedUserIds = [...lecturers.map(l => l.user_id), parseInt(values.user_id)];
-          const newAvailableUsers = UsersData.filter(user => 
-            !newUsedUserIds.includes(user.id) && user.vai_tro === 'giangvien'
-          );
-          setAvailableUsers(newAvailableUsers);
-          
-          setIsModalVisible(false);
-          Modal.success({
-            content: 'Thêm giảng viên mới thành công'
-          });
-          setLoading(false);
-        }, 500);
+        // Create new lecturer
+        await axios.post('/giangvien', lecturerData);
+        message.success('Thêm giảng viên mới thành công');
       }
+      
+      setIsModalVisible(false);
+      form.resetFields();
+      fetchLecturers(); // Refresh the list
     } catch (error) {
       console.error('Error submitting form:', error);
-      Modal.error({
-        content: 'Không thể lưu thông tin giảng viên'
-      });
+      message.error('Không thể lưu thông tin giảng viên');
+    } finally {
       setLoading(false);
     }
   };
@@ -203,7 +192,7 @@ const ManageLecturer = () => {
   // Generate a unique lecturer code
   const generateLecturerCode = () => {
     const prefix = "GV";
-    const existingCodes = lecturers.map(l => l.ma_gv);
+    const existingCodes = lecturers.map(l => l.maGiangVien);
     let newCode;
     let counter = lecturers.length + 1;
     
@@ -213,7 +202,7 @@ const ManageLecturer = () => {
     } while (existingCodes.includes(newCode));
     
     form.setFieldsValue({
-      ma_gv: newCode
+      maGiangVien: newCode
     });
   };
 
@@ -222,42 +211,36 @@ const ManageLecturer = () => {
     setSearchText(e.target.value);
   };
 
-  // Tạo danh sách bộ môn, khoa và trình độ cho bộ lọc
-  const getUniqueValues = (data, field) => {
-    const values = [...new Set(data.map(item => item[field]))];
-    return values.map(value => ({ text: value, value }));
-  };
-
-  const boMonFilters = lecturers.length > 0 ? getUniqueValues(lecturers, 'bo_mon') : [];
-  const khoaFilters = lecturers.length > 0 ? getUniqueValues(lecturers, 'khoa') : [];
-  const trinhDoFilters = lecturers.length > 0 ? getUniqueValues(lecturers, 'trinh_do') : [];
+  // Filter data based on search text
+  const filteredData = searchText
+    ? lecturers.filter(lecturer => 
+        lecturer.maGiangVien?.toLowerCase().includes(searchText.toLowerCase()) ||
+        lecturer.hoTen?.toLowerCase().includes(searchText.toLowerCase()) ||
+        lecturer.boMon?.toLowerCase().includes(searchText.toLowerCase()) ||
+        lecturer.khoa?.toLowerCase().includes(searchText.toLowerCase()) ||
+        lecturer.user_username?.toLowerCase().includes(searchText.toLowerCase()) ||
+        lecturer.user_email?.toLowerCase().includes(searchText.toLowerCase())
+      )
+    : lecturers;
 
   // Define table columns
   const columns = [
     {
-      title: 'ID',
-      dataIndex: 'id',
-      key: 'id',
-      width: 60,
-      fixed: 'left',
-      sorter: (a, b) => a.id - b.id,
-    },
-    {
       title: 'Mã GV',
-      dataIndex: 'ma_gv',
-      key: 'ma_gv',
+      dataIndex: 'maGiangVien',
+      key: 'maGiangVien',
       width: 120,
-      sorter: (a, b) => a.ma_gv.localeCompare(b.ma_gv),
+      sorter: (a, b) => a.maGiangVien?.localeCompare(b.maGiangVien),
     },
     {
       title: 'Họ và tên',
-      dataIndex: 'ho_ten',
-      key: 'ho_ten',
+      dataIndex: 'hoTen',
+      key: 'hoTen',
       width: 180,
       ellipsis: {
         showTitle: false,
       },
-      sorter: (a, b) => a.ho_ten.localeCompare(b.ho_ten),
+      sorter: (a, b) => a.hoTen?.localeCompare(b.hoTen),
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
           {text}
@@ -266,14 +249,12 @@ const ManageLecturer = () => {
     },
     {
       title: 'Bộ môn',
-      dataIndex: 'bo_mon',
-      key: 'bo_mon',
+      dataIndex: 'boMon',
+      key: 'boMon',
       width: 150,
       ellipsis: {
         showTitle: false,
       },
-      filters: boMonFilters,
-      onFilter: (value, record) => record.bo_mon === value,
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
           {text}
@@ -288,8 +269,6 @@ const ManageLecturer = () => {
       ellipsis: {
         showTitle: false,
       },
-      filters: khoaFilters,
-      onFilter: (value, record) => record.khoa === value,
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
           {text}
@@ -298,11 +277,9 @@ const ManageLecturer = () => {
     },
     {
       title: 'Trình độ',
-      dataIndex: 'trinh_do',
-      key: 'trinh_do',
+      dataIndex: 'trinhDo',
+      key: 'trinhDo',
       width: 120,
-      filters: trinhDoFilters,
-      onFilter: (value, record) => record.trinh_do === value,
     },
     {
       title: 'Tài khoản',
@@ -312,10 +289,10 @@ const ManageLecturer = () => {
       ellipsis: {
         showTitle: false,
       },
-      sorter: (a, b) => a.user_username.localeCompare(b.user_username),
+      sorter: (a, b) => a.user_username?.localeCompare(b.user_username),
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
-          {text}
+          {text || 'Chưa gán'}
         </Tooltip>
       ),
     },
@@ -327,7 +304,7 @@ const ManageLecturer = () => {
       ellipsis: {
         showTitle: false,
       },
-      sorter: (a, b) => a.user_email.localeCompare(b.user_email),
+      sorter: (a, b) => a.user_email?.localeCompare(b.user_email),
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
           {text}
@@ -336,13 +313,13 @@ const ManageLecturer = () => {
     },
     {
       title: 'Chuyên môn',
-      dataIndex: 'chuyen_mon',
-      key: 'chuyen_mon',
+      dataIndex: 'chuyenMon',
+      key: 'chuyenMon',
       width: 200,
       ellipsis: {
         showTitle: false,
       },
-      sorter: (a, b) => a.chuyen_mon.localeCompare(b.chuyen_mon),
+      sorter: (a, b) => a.chuyenMon?.localeCompare(b.chuyenMon),
       render: (text) => (
         <Tooltip placement="topLeft" title={text}>
           {text}
@@ -350,28 +327,12 @@ const ManageLecturer = () => {
       ),
     },
     {
-      title: 'Trạng thái',
-      dataIndex: 'trang_thai',
-      key: 'trang_thai',
-      width: 120,
-      filters: [
-        { text: 'Hoạt động', value: 1 },
-        { text: 'Vô hiệu hóa', value: 0 },
-      ],
-      onFilter: (value, record) => record.trang_thai === value,
-      render: (trangThai) => (
-        <Tag color={trangThai === 1 ? 'green' : 'red'}>
-          {trangThai === 1 ? 'Hoạt động' : 'Vô hiệu hóa'}
-        </Tag>
-      ),
-    },
-    {
       title: 'Thao tác',
       key: 'action',
-      width: 250,
-      className: 'action-column',
+      width: 160,
+      fixed: 'right',
       render: (_, record) => (
-        <Space size="small" className="action-buttons">
+        <Space size="small">
           <Button 
             type="primary" 
             icon={<EditOutlined />} 
@@ -386,36 +347,145 @@ const ManageLecturer = () => {
             size="small"
             onClick={() => handleDelete(record.id)}
           >
-            Xóa
+            Xoá
           </Button>
-          <Button
-            type={record.trang_thai === 1 ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trang_thai === 1 ? 'Vô hiệu' : 'Kích hoạt'}
-          </Button>
-          <Button
-            icon={<EyeOutlined />}
-            size="small"
-            onClick={() => handleEdit(record)}
-          />
+          {!record.userId && (
+            <Select
+              style={{ width: 120 }}
+              placeholder="Gán tài khoản"
+              onChange={(userId) => handleAssignUser(record.id, userId)}
+            >
+              {availableUsers.map(user => (
+                <Option key={user.id} value={user.id}>
+                  {user.username}
+                </Option>
+              ))}
+            </Select>
+          )}
         </Space>
       ),
     },
   ];
 
-  // Filter data based on search text
-  const filteredData = searchText
-    ? lecturers.filter(lecturer => 
-        lecturer.ma_gv.toLowerCase().includes(searchText.toLowerCase()) ||
-        lecturer.ho_ten.toLowerCase().includes(searchText.toLowerCase()) ||
-        lecturer.bo_mon.toLowerCase().includes(searchText.toLowerCase()) ||
-        lecturer.khoa.toLowerCase().includes(searchText.toLowerCase())
-      )
-    : lecturers;
+  // Update form to remove trangThai field
+  const renderForm = () => (
+    <Form
+      form={form}
+      layout="vertical"
+      onFinish={handleSubmit}
+    >
+      <Form.Item
+        name="maGiangVien"
+        label="Mã giảng viên"
+        rules={[{ required: true, message: 'Vui lòng nhập mã giảng viên!' }]}
+      >
+        <Input 
+          disabled={!!editingId}
+          addonAfter={
+            !editingId && 
+            <Button 
+              type="link" 
+              size="small" 
+              onClick={generateLecturerCode}
+              style={{ margin: -7 }}
+            >
+              Tạo mã
+            </Button>
+          }
+        />
+      </Form.Item>
+      
+      <Form.Item
+        name="hoTen"
+        label="Họ và tên"
+        rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="boMon"
+        label="Bộ môn"
+        rules={[{ required: true, message: 'Vui lòng nhập bộ môn!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="khoa"
+        label="Khoa"
+        rules={[{ required: true, message: 'Vui lòng nhập khoa!' }]}
+      >
+        <Input />
+      </Form.Item>
+      
+      <Form.Item
+        name="trinhDo"
+        label="Trình độ"
+        rules={[{ required: true, message: 'Vui lòng chọn trình độ!' }]}
+      >
+        <Select>
+          <Option value="">-- Chọn trình độ --</Option>
+          <Option value="Thạc sĩ">Thạc sĩ</Option>
+          <Option value="Tiến sĩ">Tiến sĩ</Option>
+          <Option value="Phó Giáo sư">Phó Giáo sư</Option>
+          <Option value="Giáo sư">Giáo sư</Option>
+        </Select>
+      </Form.Item>
+      
+      <Form.Item
+        name="chuyenMon"
+        label="Chuyên môn"
+        rules={[{ required: true, message: 'Vui lòng nhập chuyên môn!' }]}
+      >
+        <Input.TextArea placeholder="Các lĩnh vực chuyên môn, ngăn cách bằng dấu phẩy" />
+      </Form.Item>
+      
+      <Form.Item
+        name="userId"
+        label="Tài khoản người dùng"
+        rules={[{ required: true, message: 'Vui lòng chọn tài khoản!' }]}
+      >
+        <Select disabled={!!editingId}>
+          <Option value="">-- Chọn tài khoản --</Option>
+          {/* Show the currently assigned user when editing */}
+          {editingId && (
+            <Option value={form.getFieldValue('userId')}>
+              {availableUsers.find(u => u.id === form.getFieldValue('userId'))?.username || 'Unknown'}
+            </Option>
+          )}
+          {/* Show available users when adding new */}
+          {!editingId && availableUsers.map(user => (
+            <Option key={user.id} value={user.id}>
+              {user.username} - {user.hoTen} ({user.email})
+            </Option>
+          ))}
+        </Select>
+        {editingId && (
+          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
+            Không thể thay đổi tài khoản đã liên kết với giảng viên
+          </div>
+        )}
+      </Form.Item>
+      
+      <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
+        <Space>
+          <Button 
+            onClick={() => {
+              setIsModalVisible(false);
+              form.resetFields();
+            }}
+          >
+            Hủy
+          </Button>
+          <Button type="primary" htmlType="submit" loading={loading}>
+            {editingId ? 'Cập nhật' : 'Thêm mới'}
+          </Button>
+        </Space>
+      </Form.Item>
+    </Form>
+  );
 
-  // Main component render
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16, flexWrap: 'wrap', gap: '16px' }}>
@@ -442,18 +512,12 @@ const ManageLecturer = () => {
               setEditingId(null);
               form.resetFields();
               form.setFieldsValue({
-                trang_thai: 1
+                trangThai: 1
               });
               setIsModalVisible(true);
             }}
           >
             Thêm giảng viên
-          </Button>
-          <Button
-            icon={<ReloadOutlined />}
-            onClick={fetchLecturers}
-          >
-            Làm mới
           </Button>
         </Space>
       </div>
@@ -465,7 +529,12 @@ const ManageLecturer = () => {
           rowKey="id" 
           loading={loading}
           scroll={{ x: 1500 }}
-          pagination={{ pageSize: 10 }}
+          pagination={{ 
+            pageSize: 10,
+            showTotal: (total, range) => `${range[0]}-${range[1]} của ${total} giảng viên`,
+            showSizeChanger: true,
+            showQuickJumper: true
+          }}
         />
       </div>
       
@@ -497,132 +566,7 @@ const ManageLecturer = () => {
         maskClosable={false}
         width={600}
       >
-        <Form
-          form={form}
-          layout="vertical"
-          onFinish={handleSubmit}
-        >
-          <Form.Item
-            name="ma_gv"
-            label="Mã giảng viên"
-            rules={[{ required: true, message: 'Vui lòng nhập mã giảng viên!' }]}
-          >
-            <Input 
-              disabled={!!editingId}
-              addonAfter={
-                !editingId && 
-                <Button 
-                  type="link" 
-                  size="small" 
-                  onClick={generateLecturerCode}
-                  style={{ margin: -7 }}
-                >
-                  Tạo mã
-                </Button>
-              }
-            />
-          </Form.Item>
-          
-          <Form.Item
-            name="ho_ten"
-            label="Họ và tên"
-            rules={[{ required: true, message: 'Vui lòng nhập họ và tên!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="bo_mon"
-            label="Bộ môn"
-            rules={[{ required: true, message: 'Vui lòng nhập bộ môn!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="khoa"
-            label="Khoa"
-            rules={[{ required: true, message: 'Vui lòng nhập khoa!' }]}
-          >
-            <Input />
-          </Form.Item>
-          
-          <Form.Item
-            name="trinh_do"
-            label="Trình độ"
-            rules={[{ required: true, message: 'Vui lòng chọn trình độ!' }]}
-          >
-            <Select>
-              <Option value="">-- Chọn trình độ --</Option>
-              <Option value="Thạc sĩ">Thạc sĩ</Option>
-              <Option value="Tiến sĩ">Tiến sĩ</Option>
-              <Option value="Phó Giáo sư">Phó Giáo sư</Option>
-              <Option value="Giáo sư">Giáo sư</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item
-            name="chuyen_mon"
-            label="Chuyên môn"
-            rules={[{ required: true, message: 'Vui lòng nhập chuyên môn!' }]}
-          >
-            <Input.TextArea placeholder="Các lĩnh vực chuyên môn, ngăn cách bằng dấu phẩy" />
-          </Form.Item>
-          
-          <Form.Item
-            name="user_id"
-            label="Tài khoản người dùng"
-            rules={[{ required: true, message: 'Vui lòng chọn tài khoản!' }]}
-          >
-            <Select disabled={!!editingId}>
-              <Option value="">-- Chọn tài khoản --</Option>
-              {/* Show the currently assigned user when editing */}
-              {editingId && (
-                <Option value={form.getFieldValue('user_id')}>
-                  {UsersData.find(u => u.id === form.getFieldValue('user_id'))?.username || 'Unknown'}
-                </Option>
-              )}
-              {/* Show available users when adding new */}
-              {!editingId && availableUsers.map(user => (
-                <Option key={user.id} value={user.id}>
-                  {user.username} - {user.ho_ten} ({user.email})
-                </Option>
-              ))}
-            </Select>
-            {editingId && (
-              <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-                Không thể thay đổi tài khoản đã liên kết với giảng viên
-              </div>
-            )}
-          </Form.Item>
-          
-          <Form.Item
-            name="trang_thai"
-            label="Trạng thái"
-            rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
-          >
-            <Select>
-              <Option value={1}>Hoạt động</Option>
-              <Option value={0}>Vô hiệu hóa</Option>
-            </Select>
-          </Form.Item>
-          
-          <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
-            <Space>
-              <Button 
-                onClick={() => {
-                  setIsModalVisible(false);
-                  form.resetFields();
-                }}
-              >
-                Hủy
-              </Button>
-              <Button type="primary" htmlType="submit" loading={loading}>
-                {editingId ? 'Cập nhật' : 'Thêm mới'}
-              </Button>
-            </Space>
-          </Form.Item>
-        </Form>
+        {renderForm()}
       </Modal>
     </Card>
   );
