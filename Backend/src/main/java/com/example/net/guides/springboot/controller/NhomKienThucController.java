@@ -2,11 +2,15 @@ package com.example.net.guides.springboot.controller;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.HashMap;
+import java.util.Map;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +26,7 @@ import com.example.net.guides.springboot.service.NhomKienThucService;
 
 @RestController
 @RequestMapping("/api/nhomkienthuc")
+@CrossOrigin("*")
 public class NhomKienThucController {
     
     @Autowired
@@ -51,28 +56,42 @@ public class NhomKienThucController {
 
 
     @PostMapping
-    public ResponseEntity create(@RequestBody NhomKienThuc nkt){
-        return ResponseEntity.ok(nhomKienThucService.save(nkt));
+    public ResponseEntity<NhomKienThuc> create(@RequestBody NhomKienThuc nkt){
+        // Ensure it's a new record
+        nkt.setId(null);
+        // Set default active status
+        if (nkt.getTrangThai() == null) {
+            nkt.setTrangThai(1);
+        }
+        NhomKienThuc savedNkt = nhomKienThucService.save(nkt);
+        return ResponseEntity.status(HttpStatus.CREATED).body(savedNkt);
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<NhomKienThuc> update(@PathVariable int id, @RequestBody NhomKienThuc nkt){
-        if( !nhomKienThucService.getById(id).isPresent())
-            return ResponseEntity.notFound().build();
-        return ResponseEntity.ok(nhomKienThucService.save(nkt));
+    public ResponseEntity<?> update(@PathVariable int id, @RequestBody NhomKienThuc nkt){
+        Optional<NhomKienThuc> existingNkt = nhomKienThucService.getById(id);
+        if (!existingNkt.isPresent()) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Nhóm kiến thức không tồn tại hoặc đã bị xóa");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
+        
+        nkt.setId(id);
+        NhomKienThuc updatedNkt = nhomKienThucService.save(nkt);
+        return ResponseEntity.ok(updatedNkt);
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<Void> delete(@PathVariable int id) {
-        Optional<NhomKienThuc> op = nhomKienThucService.getById(id);
-        if (!op.isPresent())
-            return ResponseEntity.notFound().build();
-        NhomKienThuc nkt = op.get();
-        nkt.setTrangThai(0);
-        nhomKienThucService.save(nkt);
-        return ResponseEntity.ok().build();
+    public ResponseEntity<?> delete(@PathVariable int id) {
+        boolean deleted = nhomKienThucService.delete(id);
+        if (deleted) {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Xóa nhóm kiến thức thành công");
+            return ResponseEntity.ok(response);
+        } else {
+            Map<String, String> response = new HashMap<>();
+            response.put("message", "Nhóm kiến thức không tồn tại");
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).body(response);
+        }
     }
-    
-
-
 }

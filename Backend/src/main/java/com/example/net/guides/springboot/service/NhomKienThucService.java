@@ -18,17 +18,37 @@ public class NhomKienThucService {
     private NhomKienThucRepository nhomKienThucRepo;
 
     public List<NhomKienThuc> getAll(){
-        return nhomKienThucRepo.findAll();
+        // Return only active records (trangThai != 0)
+        return nhomKienThucRepo.findByTrangThaiNot(0);
     }
 
     public Optional<NhomKienThuc> getById(Integer id){
-        return nhomKienThucRepo.findById(id);
+        // Return only if active (trangThai != 0)
+        return nhomKienThucRepo.findByIdAndTrangThaiNot(id, 0);
     }
+    
     public NhomKienThuc save(NhomKienThuc nhomKienThuc){
+        // Set default status to active if not provided
+        if (nhomKienThuc.getTrangThai() == null) {
+            nhomKienThuc.setTrangThai(1);
+        }
         return nhomKienThucRepo.save(nhomKienThuc);
     }
 
     public Page<NhomKienThuc> getAllPaging(int page, int size) {
-        return nhomKienThucRepo.findAll(PageRequest.of(page, size));
+        // Return only active records (trangThai != 0)
+        return nhomKienThucRepo.findByTrangThaiNot(0, PageRequest.of(page, size));
+    }
+    
+    public boolean delete(Integer id) {
+        Optional<NhomKienThuc> optionalNhomKienThuc = nhomKienThucRepo.findById(id);
+        if (optionalNhomKienThuc.isPresent()) {
+            NhomKienThuc nhomKienThuc = optionalNhomKienThuc.get();
+            // Soft delete - set trangThai to 0
+            nhomKienThuc.setTrangThai(0);
+            nhomKienThucRepo.save(nhomKienThuc);
+            return true;
+        }
+        return false;
     }
 }

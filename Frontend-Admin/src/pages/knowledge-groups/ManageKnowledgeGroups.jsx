@@ -1,10 +1,14 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Tooltip } from 'antd';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Tooltip, message } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// API base URL
+const API_URL = 'http://localhost:8080/api';
 
 const ManageKnowledgeGroups = () => {
   const [knowledgeGroups, setKnowledgeGroups] = useState([]);
@@ -14,161 +18,127 @@ const ManageKnowledgeGroups = () => {
   const [searchText, setSearchText] = useState('');
   const [form] = Form.useForm();
 
-  // Mô phỏng dữ liệu nhóm kiến thức
-  const mockData = [
-    {
-      id: 1,
-      ma_nhom: 'KHDC',
-      ten_nhom: 'Kiến thức đại cương',
-      mo_ta: 'Các môn học cung cấp nền tảng kiến thức chung cho sinh viên.',
-      so_tin_chi_toi_thieu: 30,
-      trang_thai: 1
-    },
-    {
-      id: 2,
-      ma_nhom: 'KHCN',
-      ten_nhom: 'Kiến thức cơ sở ngành',
-      mo_ta: 'Các môn học cung cấp kiến thức cơ sở cho ngành học.',
-      so_tin_chi_toi_thieu: 24,
-      trang_thai: 1
-    },
-    {
-      id: 3,
-      ma_nhom: 'KHCN',
-      ten_nhom: 'Kiến thức chuyên ngành',
-      mo_ta: 'Các môn học chuyên sâu của ngành đào tạo.',
-      so_tin_chi_toi_thieu: 36,
-      trang_thai: 1
-    },
-    {
-      id: 4,
-      ma_nhom: 'TNTC',
-      ten_nhom: 'Thực tập và tốt nghiệp',
-      mo_ta: 'Hoạt động thực tập tại doanh nghiệp và thực hiện khóa luận tốt nghiệp.',
-      so_tin_chi_toi_thieu: 10,
-      trang_thai: 0
-    }
-  ];
-
-  // Fetch dữ liệu khi component mount
+  // Fetch data when component mounts
   useEffect(() => {
     fetchKnowledgeGroups();
   }, []);
 
-  // Hàm lấy dữ liệu nhóm kiến thức
-  const fetchKnowledgeGroups = () => {
+  // Fetch knowledge groups from API
+  const fetchKnowledgeGroups = async () => {
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      setKnowledgeGroups(mockData);
+    try {
+      const response = await axios.get(`${API_URL}/nhomkienthuc`);
+      setKnowledgeGroups(response.data);
+    } catch (error) {
+      console.error('Error fetching knowledge groups:', error);
+      message.error('Không thể tải dữ liệu nhóm kiến thức');
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
-  // Xử lý sự kiện khi người dùng nhấn nút chỉnh sửa
+  // Handle editing a knowledge group
   const handleEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
-      ma_nhom: record.ma_nhom,
-      ten_nhom: record.ten_nhom,
-      mo_ta: record.mo_ta,
-      so_tin_chi_toi_thieu: record.so_tin_chi_toi_thieu,
-      trang_thai: record.trang_thai
+      maNhom: record.maNhom,
+      tenNhom: record.tenNhom,
+      trangThai: record.trangThai
     });
     setIsModalVisible(true);
   };
 
-  // Xử lý sự kiện khi người dùng xác nhận xóa
+  // Handle deleting a knowledge group
   const handleDelete = (groupId) => {
     Modal.confirm({
       title: 'Xác nhận xóa',
-      content: 'Bạn có chắc chắn muốn xóa nhóm kiến thức này?',
-      onOk: () => {
+      content: 'Bạn có chắc chắn muốn xóa nhóm kiến thức này? Nhóm sẽ bị ẩn khỏi hệ thống nhưng không bị xóa hoàn toàn.',
+      onOk: async () => {
         setLoading(true);
-        // Mô phỏng API call
-        setTimeout(() => {
-          const updatedGroups = knowledgeGroups.filter(group => group.id !== groupId);
-          setKnowledgeGroups(updatedGroups);
-          Modal.success({
-            content: 'Xóa nhóm kiến thức thành công'
-          });
+        try {
+          await axios.delete(`${API_URL}/nhomkienthuc/${groupId}`);
+          message.success('Xóa nhóm kiến thức thành công');
+          fetchKnowledgeGroups(); // Refresh the list
+        } catch (error) {
+          console.error('Error deleting knowledge group:', error);
+          message.error('Xóa nhóm kiến thức thất bại');
+        } finally {
           setLoading(false);
-        }, 500);
+        }
       }
     });
   };
 
-  // Xử lý sự kiện khi người dùng toggle trạng thái
-  const handleToggleStatus = (record) => {
-    const newStatus = record.trang_thai === 1 ? 0 : 1;
+  // Handle toggling status
+  const handleToggleStatus = async (record) => {
+    const newStatus = record.trangThai === 1 ? 0 : 1;
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      const updatedGroups = knowledgeGroups.map(group => {
-        if (group.id === record.id) {
-          return { ...group, trang_thai: newStatus };
-        }
-        return group;
-      });
-      setKnowledgeGroups(updatedGroups);
-      Modal.success({
-        content: `Nhóm kiến thức đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`
-      });
+    try {
+      const updatedRecord = { ...record, trangThai: newStatus };
+      await axios.put(`${API_URL}/nhomkienthuc/${record.id}`, updatedRecord);
+      message.success(`Nhóm kiến thức đã được ${newStatus === 1 ? 'kích hoạt' : 'vô hiệu hóa'} thành công`);
+      fetchKnowledgeGroups(); // Refresh the list
+    } catch (error) {
+      console.error('Error updating knowledge group status:', error);
+      message.error('Cập nhật trạng thái thất bại');
+    } finally {
       setLoading(false);
-    }, 500);
-  };
-
-  // Xử lý sự kiện khi người dùng submit form thêm/sửa
-  const handleSubmit = (values) => {
-    setLoading(true);
-    
-    if (editingId) {
-      // Mô phỏng API cập nhật
-      setTimeout(() => {
-        const updatedGroups = knowledgeGroups.map(group => {
-          if (group.id === editingId) {
-            return { ...group, ...values };
-          }
-          return group;
-        });
-        setKnowledgeGroups(updatedGroups);
-        setIsModalVisible(false);
-        Modal.success({
-          content: 'Cập nhật nhóm kiến thức thành công'
-        });
-        setLoading(false);
-      }, 500);
-    } else {
-      // Mô phỏng API thêm mới
-      setTimeout(() => {
-        const newGroup = {
-          id: Math.max(...knowledgeGroups.map(g => g.id), 0) + 1,
-          ...values
-        };
-        setKnowledgeGroups([...knowledgeGroups, newGroup]);
-        setIsModalVisible(false);
-        Modal.success({
-          content: 'Thêm nhóm kiến thức mới thành công'
-        });
-        setLoading(false);
-      }, 500);
     }
   };
 
-  // Xử lý sự kiện khi người dùng tìm kiếm
+  // Handle form submission
+  const handleSubmit = async (values) => {
+    setLoading(true);
+    
+    try {
+      const knowledgeGroupData = {
+        maNhom: values.maNhom,
+        tenNhom: values.tenNhom,
+        trangThai: values.trangThai
+      };
+      
+      if (editingId) {
+        // Update existing knowledge group
+        await axios.put(`${API_URL}/nhomkienthuc/${editingId}`, {
+          ...knowledgeGroupData,
+          id: editingId
+        });
+        message.success('Cập nhật nhóm kiến thức thành công');
+      } else {
+        // Add new knowledge group
+        await axios.post(`${API_URL}/nhomkienthuc`, knowledgeGroupData);
+        message.success('Thêm nhóm kiến thức mới thành công');
+      }
+      
+      setIsModalVisible(false);
+      form.resetFields();
+      fetchKnowledgeGroups(); // Refresh the list
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      message.error('Lưu nhóm kiến thức thất bại');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Handle search
   const handleSearch = (e) => {
     setSearchText(e.target.value);
   };
 
-  // Lọc dữ liệu theo từ khóa tìm kiếm
-  const filteredData = searchText
-    ? knowledgeGroups.filter(group => 
-        group.ma_nhom.toLowerCase().includes(searchText.toLowerCase()) ||
-        group.ten_nhom.toLowerCase().includes(searchText.toLowerCase())
+  // Filter data based on search text and active status
+  const filteredData = knowledgeGroups
+    // Filter out inactive records (trangThai=0)
+    .filter(group => group.trangThai === 1)
+    // Then apply search text filter
+    .filter(group => 
+      !searchText || (
+        (group.maNhom && group.maNhom.toLowerCase().includes(searchText.toLowerCase())) ||
+        (group.tenNhom && group.tenNhom.toLowerCase().includes(searchText.toLowerCase()))
       )
-    : knowledgeGroups;
+    );
 
-  // Định nghĩa các cột trong bảng
+  // Define table columns
   const columns = [
     {
       title: 'ID',
@@ -180,10 +150,10 @@ const ManageKnowledgeGroups = () => {
     },
     {
       title: 'Mã nhóm',
-      dataIndex: 'ma_nhom',
-      key: 'ma_nhom',
+      dataIndex: 'maNhom',
+      key: 'maNhom',
       width: 120,
-      sorter: (a, b) => a.ma_nhom.localeCompare(b.ma_nhom),
+      sorter: (a, b) => a.maNhom.localeCompare(b.maNhom),
       ellipsis: {
         showTitle: false,
       },
@@ -195,10 +165,10 @@ const ManageKnowledgeGroups = () => {
     },
     {
       title: 'Tên nhóm kiến thức',
-      dataIndex: 'ten_nhom',
-      key: 'ten_nhom',
+      dataIndex: 'tenNhom',
+      key: 'tenNhom',
       width: 250,
-      sorter: (a, b) => a.ten_nhom.localeCompare(b.ten_nhom),
+      sorter: (a, b) => a.tenNhom.localeCompare(b.tenNhom),
       ellipsis: {
         showTitle: false,
       },
@@ -209,29 +179,21 @@ const ManageKnowledgeGroups = () => {
       ),
     },
     {
-      title: 'Số tín chỉ tối thiểu',
-      dataIndex: 'so_tin_chi_toi_thieu',
-      key: 'so_tin_chi_toi_thieu',
-      width: 150,
-      align: 'center',
-      sorter: (a, b) => a.so_tin_chi_toi_thieu - b.so_tin_chi_toi_thieu,
-    },
-    {
       title: 'Trạng thái',
-      dataIndex: 'trang_thai',
-      key: 'trang_thai',
+      dataIndex: 'trangThai',
+      key: 'trangThai',
       width: 120,
       align: 'center',
-      render: trang_thai => (
-        <Tag color={trang_thai === 1 ? 'green' : 'red'}>
-          {trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}
+      render: trangThai => (
+        <Tag color={trangThai === 1 ? 'green' : 'red'}>
+          {trangThai === 1 ? 'Hoạt động' : 'Không hoạt động'}
         </Tag>
       ),
       filters: [
         { text: 'Hoạt động', value: 1 },
         { text: 'Không hoạt động', value: 0 },
       ],
-      onFilter: (value, record) => record.trang_thai === value,
+      onFilter: (value, record) => record.trangThai === value,
     },
     {
       title: 'Thao tác',
@@ -257,26 +219,17 @@ const ManageKnowledgeGroups = () => {
             Xóa
           </Button>
           <Button
-            type={record.trang_thai === 1 ? 'default' : 'primary'}
-            size="small"
-            onClick={() => handleToggleStatus(record)}
-          >
-            {record.trang_thai === 1 ? 'Vô hiệu' : 'Kích hoạt'}
-          </Button>
-          <Button
             icon={<InfoCircleOutlined />}
             size="small"
             onClick={() => {
               Modal.info({
-                title: `${record.ten_nhom} (${record.ma_nhom})`,
+                title: `${record.tenNhom} (${record.maNhom})`,
                 content: (
                   <div>
                     <p><strong>ID:</strong> {record.id}</p>
-                    <p><strong>Mã nhóm:</strong> {record.ma_nhom}</p>
-                    <p><strong>Tên nhóm kiến thức:</strong> {record.ten_nhom}</p>
-                    <p><strong>Mô tả:</strong> {record.mo_ta}</p>
-                    <p><strong>Số tín chỉ tối thiểu:</strong> {record.so_tin_chi_toi_thieu}</p>
-                    <p><strong>Trạng thái:</strong> {record.trang_thai === 1 ? 'Hoạt động' : 'Không hoạt động'}</p>
+                    <p><strong>Mã nhóm:</strong> {record.maNhom}</p>
+                    <p><strong>Tên nhóm kiến thức:</strong> {record.tenNhom}</p>
+                    <p><strong>Trạng thái:</strong> {record.trangThai === 1 ? 'Hoạt động' : 'Không hoạt động'}</p>
                   </div>
                 ),
                 width: 500,
@@ -307,8 +260,8 @@ const ManageKnowledgeGroups = () => {
               setEditingId(null);
               form.resetFields();
               form.setFieldsValue({
-                trang_thai: 1,
-                so_tin_chi_toi_thieu: 12
+                trangThai: 1,
+                soTinChiToiThieu: 12
               });
               setIsModalVisible(true);
             }}
@@ -374,26 +327,17 @@ const ManageKnowledgeGroups = () => {
         >
           <div style={{ display: 'flex', gap: '16px' }}>
             <Form.Item
-              name="ma_nhom"
+              name="maNhom"
               label="Mã nhóm"
               rules={[{ required: true, message: 'Vui lòng nhập mã nhóm!' }]}
-              style={{ width: '50%' }}
+              style={{ width: '100%' }}
             >
               <Input />
-            </Form.Item>
-
-            <Form.Item
-              name="so_tin_chi_toi_thieu"
-              label="Số tín chỉ tối thiểu"
-              rules={[{ required: true, message: 'Vui lòng nhập số tín chỉ tối thiểu!' }]}
-              style={{ width: '50%' }}
-            >
-              <Input type="number" min={0} />
             </Form.Item>
           </div>
 
           <Form.Item
-            name="ten_nhom"
+            name="tenNhom"
             label="Tên nhóm kiến thức"
             rules={[{ required: true, message: 'Vui lòng nhập tên nhóm kiến thức!' }]}
           >
@@ -401,14 +345,7 @@ const ManageKnowledgeGroups = () => {
           </Form.Item>
 
           <Form.Item
-            name="mo_ta"
-            label="Mô tả"
-          >
-            <TextArea rows={4} />
-          </Form.Item>
-
-          <Form.Item
-            name="trang_thai"
+            name="trangThai"
             label="Trạng thái"
             rules={[{ required: true, message: 'Vui lòng chọn trạng thái!' }]}
           >
