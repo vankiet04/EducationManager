@@ -2,11 +2,33 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, InputNumber, 
   Tag, Tooltip, Divider, Badge } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  ReloadOutlined, InfoCircleOutlined, LinkOutlined, EyeOutlined } from '@ant-design/icons';
+  ReloadOutlined, InfoCircleOutlined, LinkOutlined, EyeOutlined, BookOutlined } from '@ant-design/icons';
+import axios from 'axios';
 
 const { Title, Text } = Typography;
 const { Option } = Select;
 const { TextArea } = Input;
+
+// API base URL
+const API_URL = 'http://localhost:8080';
+
+// Thiết lập cấu hình global cho axios
+axios.defaults.baseURL = API_URL;
+axios.defaults.headers.common['Content-Type'] = 'application/json';
+axios.defaults.headers.common['Accept'] = 'application/json';
+
+// Thêm interceptor để xử lý lỗi từ API
+axios.interceptors.response.use(
+  (response) => response,
+  (error) => {
+    console.error('API Error:', error);
+    if (error.response) {
+      console.error('Response data:', error.response.data);
+      console.error('Response status:', error.response.status);
+    }
+    return Promise.reject(error);
+  }
+);
 
 const ManageCurriculumKnowledge = () => {
   const [curriculumKnowledge, setCurriculumKnowledge] = useState([]);
@@ -19,85 +41,35 @@ const ManageCurriculumKnowledge = () => {
   const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [form] = Form.useForm();
 
-  // Mô phỏng dữ liệu khung chương trình
-  const mockCurriculums = [
-    { id: 1, ma_khung: 'CNTT2020', ten_khung: 'Khung chương trình ngành CNTT (K2020)', nganh: 'Công nghệ thông tin', nam_bat_dau: 2020 },
-    { id: 2, ma_khung: 'KTPM2021', ten_khung: 'Khung chương trình ngành KTPM (K2021)', nganh: 'Kỹ thuật phần mềm', nam_bat_dau: 2021 },
-    { id: 3, ma_khung: 'HTTT2022', ten_khung: 'Khung chương trình ngành HTTT (K2022)', nganh: 'Hệ thống thông tin', nam_bat_dau: 2022 }
-  ];
-
-  // Mô phỏng dữ liệu nhóm kiến thức
-  const mockKnowledgeGroups = [
-    { id: 1, ma_nhom: 'KHDC', ten_nhom: 'Kiến thức đại cương', so_tin_chi_toi_thieu: 30, trang_thai: 1 },
-    { id: 2, ma_nhom: 'KHCN', ten_nhom: 'Kiến thức cơ sở ngành', so_tin_chi_toi_thieu: 24, trang_thai: 1 },
-    { id: 3, ma_nhom: 'KNCN', ten_nhom: 'Kiến thức chuyên ngành', so_tin_chi_toi_thieu: 36, trang_thai: 1 },
-    { id: 4, ma_nhom: 'TNTC', ten_nhom: 'Thực tập và tốt nghiệp', so_tin_chi_toi_thieu: 10, trang_thai: 1 }
-  ];
-
-  // Mô phỏng dữ liệu khung chương trình - nhóm kiến thức
-  const mockCurriculumKnowledge = [
-    {
-      id: 1,
-      khung_chuong_trinh_id: 1,
-      nhom_kien_thuc_id: 1,
-      ten_khung: 'Khung chương trình ngành CNTT (K2020)',
-      ma_khung: 'CNTT2020',
-      ten_nhom: 'Kiến thức đại cương',
-      ma_nhom: 'KHDC',
-      so_tin_chi_bat_buoc: 25,
-      so_tin_chi_tu_chon: 5,
-      tong_so_tin_chi: 30,
-      thu_tu_sap_xep: 1,
-      ghi_chu: 'Bắt buộc hoàn thành trong 2 năm đầu',
-      trang_thai: 1
-    },
-    {
-      id: 2,
-      khung_chuong_trinh_id: 1,
-      nhom_kien_thuc_id: 2,
-      ten_khung: 'Khung chương trình ngành CNTT (K2020)',
-      ma_khung: 'CNTT2020',
-      ten_nhom: 'Kiến thức cơ sở ngành',
-      ma_nhom: 'KHCN',
-      so_tin_chi_bat_buoc: 18,
-      so_tin_chi_tu_chon: 6,
-      tong_so_tin_chi: 24,
-      thu_tu_sap_xep: 2,
-      ghi_chu: 'Hoàn thành sau khi đã học xong kiến thức đại cương',
-      trang_thai: 1
-    },
-    {
-      id: 3,
-      khung_chuong_trinh_id: 1,
-      nhom_kien_thuc_id: 3,
-      ten_khung: 'Khung chương trình ngành CNTT (K2020)',
-      ma_khung: 'CNTT2020',
-      ten_nhom: 'Kiến thức chuyên ngành',
-      ma_nhom: 'KNCN',
-      so_tin_chi_bat_buoc: 24,
-      so_tin_chi_tu_chon: 12,
-      tong_so_tin_chi: 36,
-      thu_tu_sap_xep: 3,
-      ghi_chu: 'Hoàn thành trong năm thứ 3 và 4',
-      trang_thai: 1
-    }
-  ];
-
   // Fetch dữ liệu khi component mount
   useEffect(() => {
     fetchData();
   }, []);
 
   // Hàm lấy dữ liệu
-  const fetchData = () => {
+  const fetchData = async () => {
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
-      setCurriculums(mockCurriculums);
-      setKnowledgeGroups(mockKnowledgeGroups);
-      setCurriculumKnowledge(mockCurriculumKnowledge);
+    try {
+      // Fetch danh sách khung chương trình
+      const curriculumsResponse = await axios.get('/khungchuongtrinh');
+      setCurriculums(curriculumsResponse.data);
+
+      // Fetch danh sách nhóm kiến thức
+      const knowledgeGroupsResponse = await axios.get('/nhomkienthuc');
+      setKnowledgeGroups(knowledgeGroupsResponse.data);
+
+      // Fetch danh sách liên kết khung chương trình - nhóm kiến thức
+      const curriculumKnowledgeResponse = await axios.get('/khungchuongtrinh-nhomkienthuc');
+      setCurriculumKnowledge(curriculumKnowledgeResponse.data);
+    } catch (error) {
+      console.error('Error fetching data:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể tải dữ liệu. Vui lòng thử lại sau.'
+      });
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   // Xử lý sự kiện khi người dùng tìm kiếm
@@ -153,27 +125,47 @@ const ManageCurriculumKnowledge = () => {
     Modal.confirm({
       title: 'Xác nhận xóa',
       content: 'Bạn có chắc chắn muốn xóa mối liên kết này?',
-      onOk: () => {
+      onOk: async () => {
         setLoading(true);
-        // Mô phỏng API call
-        setTimeout(() => {
-          const updatedData = curriculumKnowledge.filter(item => item.id !== id);
+        try {
+          // Thay vì xóa, chúng ta sẽ cập nhật trạng thái về 0
+          await axios.put(`/khungchuongtrinh-nhomkienthuc/${id}`, {
+            trang_thai: 0
+          });
+          
+          const updatedData = curriculumKnowledge.map(item => {
+            if (item.id === id) {
+              return { ...item, trang_thai: 0 };
+            }
+            return item;
+          });
           setCurriculumKnowledge(updatedData);
           Modal.success({
-            content: 'Xóa liên kết thành công'
+            content: 'Cập nhật trạng thái thành công'
           });
+        } catch (error) {
+          console.error('Error updating status:', error);
+          Modal.error({
+            title: 'Lỗi',
+            content: 'Không thể cập nhật trạng thái. Vui lòng thử lại sau.'
+          });
+        } finally {
           setLoading(false);
-        }, 500);
+        }
       }
     });
   };
 
   // Xử lý toggle trạng thái
-  const handleToggleStatus = (record) => {
+  const handleToggleStatus = async (record) => {
     const newStatus = record.trang_thai === 1 ? 0 : 1;
     setLoading(true);
-    // Mô phỏng API call
-    setTimeout(() => {
+    try {
+      await axios.put(`/khungchuongtrinh-nhomkienthuc/${record.id}`, {
+        ...record,
+        trang_thai: newStatus
+      });
+      
       const updatedData = curriculumKnowledge.map(item => {
         if (item.id === record.id) {
           return { ...item, trang_thai: newStatus };
@@ -184,39 +176,46 @@ const ManageCurriculumKnowledge = () => {
       Modal.success({
         content: `Cập nhật trạng thái thành công`
       });
+    } catch (error) {
+      console.error('Error updating status:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể cập nhật trạng thái. Vui lòng thử lại sau.'
+      });
+    } finally {
       setLoading(false);
-    }, 500);
+    }
   };
 
   // Xử lý sự kiện khi người dùng submit form thêm/sửa
-  const handleSubmit = (values) => {
+  const handleSubmit = async (values) => {
     setLoading(true);
-    
-    // Tính tổng số tín chỉ
-    const totalCredits = values.so_tin_chi_bat_buoc + values.so_tin_chi_tu_chon;
-    
-    // Lấy thông tin liên quan
-    const curriculum = curriculums.find(c => c.id === values.khung_chuong_trinh_id);
-    const knowledgeGroup = knowledgeGroups.find(k => k.id === values.nhom_kien_thuc_id);
-    
-    const itemData = {
-      khung_chuong_trinh_id: values.khung_chuong_trinh_id,
-      nhom_kien_thuc_id: values.nhom_kien_thuc_id,
-      ten_khung: curriculum.ten_khung,
-      ma_khung: curriculum.ma_khung,
-      ten_nhom: knowledgeGroup.ten_nhom,
-      ma_nhom: knowledgeGroup.ma_nhom,
-      so_tin_chi_bat_buoc: values.so_tin_chi_bat_buoc,
-      so_tin_chi_tu_chon: values.so_tin_chi_tu_chon,
-      tong_so_tin_chi: totalCredits,
-      thu_tu_sap_xep: values.thu_tu_sap_xep,
-      ghi_chu: values.ghi_chu,
-      trang_thai: values.trang_thai
-    };
-    
-    if (editingId) {
-      // Mô phỏng API cập nhật
-      setTimeout(() => {
+    try {
+      // Tính tổng số tín chỉ
+      const totalCredits = values.so_tin_chi_bat_buoc + values.so_tin_chi_tu_chon;
+      
+      // Lấy thông tin liên quan
+      const curriculum = curriculums.find(c => c.id === values.khung_chuong_trinh_id);
+      const knowledgeGroup = knowledgeGroups.find(k => k.id === values.nhom_kien_thuc_id);
+      
+      const itemData = {
+        khung_chuong_trinh_id: values.khung_chuong_trinh_id,
+        nhom_kien_thuc_id: values.nhom_kien_thuc_id,
+        ten_khung: curriculum.ten_khung,
+        ma_khung: curriculum.ma_khung,
+        ten_nhom: knowledgeGroup.ten_nhom,
+        ma_nhom: knowledgeGroup.ma_nhom,
+        so_tin_chi_bat_buoc: values.so_tin_chi_bat_buoc,
+        so_tin_chi_tu_chon: values.so_tin_chi_tu_chon,
+        tong_so_tin_chi: totalCredits,
+        thu_tu_sap_xep: values.thu_tu_sap_xep,
+        ghi_chu: values.ghi_chu,
+        trang_thai: values.trang_thai || 1 // Mặc định là 1 nếu không có giá trị
+      };
+      
+      if (editingId) {
+        // Cập nhật liên kết
+        await axios.put(`/khungchuongtrinh-nhomkienthuc/${editingId}`, itemData);
         const updatedData = curriculumKnowledge.map(item => {
           if (item.id === editingId) {
             return { ...item, ...itemData };
@@ -224,42 +223,43 @@ const ManageCurriculumKnowledge = () => {
           return item;
         });
         setCurriculumKnowledge(updatedData);
-        setIsModalVisible(false);
-        form.resetFields();
         Modal.success({
           content: 'Cập nhật thành công'
         });
-        setLoading(false);
-      }, 500);
-    } else {
-      // Kiểm tra xem liên kết đã tồn tại chưa
-      const exists = curriculumKnowledge.some(
-        item => item.khung_chuong_trinh_id === values.khung_chuong_trinh_id && 
-                item.nhom_kien_thuc_id === values.nhom_kien_thuc_id
-      );
-      
-      if (exists) {
-        Modal.error({
-          content: 'Liên kết giữa khung chương trình và nhóm kiến thức này đã tồn tại!'
-        });
-        setLoading(false);
-        return;
-      }
-      
-      // Mô phỏng API thêm mới
-      setTimeout(() => {
-        const newItem = {
-          id: Math.max(...curriculumKnowledge.map(item => item.id), 0) + 1,
-          ...itemData
-        };
-        setCurriculumKnowledge([...curriculumKnowledge, newItem]);
-        setIsModalVisible(false);
-        form.resetFields();
+      } else {
+        // Kiểm tra xem liên kết đã tồn tại chưa
+        const exists = curriculumKnowledge.some(
+          item => item.khung_chuong_trinh_id === values.khung_chuong_trinh_id && 
+                  item.nhom_kien_thuc_id === values.nhom_kien_thuc_id &&
+                  item.trang_thai === 1 // Chỉ kiểm tra các liên kết đang hoạt động
+        );
+        
+        if (exists) {
+          Modal.error({
+            content: 'Liên kết giữa khung chương trình và nhóm kiến thức này đã tồn tại!'
+          });
+          setLoading(false);
+          return;
+        }
+        
+        // Thêm mới liên kết
+        const response = await axios.post('/khungchuongtrinh-nhomkienthuc', itemData);
+        setCurriculumKnowledge([...curriculumKnowledge, response.data]);
         Modal.success({
           content: 'Thêm mới thành công'
         });
-        setLoading(false);
-      }, 500);
+      }
+      
+      setIsModalVisible(false);
+      form.resetFields();
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể lưu dữ liệu. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -278,6 +278,24 @@ const ManageCurriculumKnowledge = () => {
       return Promise.reject(`Tổng số tín chỉ (${totalCredits}) phải lớn hơn hoặc bằng số tín chỉ tối thiểu của nhóm kiến thức (${minCredits})!`);
     }
     
+    return Promise.resolve();
+  };
+
+  // Kiểm tra mã nhóm đã tồn tại chưa
+  const validateGroupCode = (_, value) => {
+    if (!value) {
+      return Promise.reject('Vui lòng nhập mã nhóm!');
+    }
+
+    // Kiểm tra trong danh sách nhóm kiến thức
+    const exists = knowledgeGroups.some(
+      group => group.ma_nhom === value && group.id !== form.getFieldValue('id')
+    );
+
+    if (exists) {
+      return Promise.reject('Mã nhóm này đã tồn tại!');
+    }
+
     return Promise.resolve();
   };
 
@@ -363,23 +381,6 @@ const ManageCurriculumKnowledge = () => {
       width: 80,
       align: 'center',
       sorter: (a, b) => a.thu_tu_sap_xep - b.thu_tu_sap_xep,
-    },
-    {
-      title: 'Trạng thái',
-      dataIndex: 'trang_thai',
-      key: 'trang_thai',
-      width: 120,
-      align: 'center',
-      render: trang_thai => (
-        <Tag color={trang_thai === 1 ? 'green' : 'red'}>
-          {trang_thai === 1 ? 'Đang áp dụng' : 'Không áp dụng'}
-        </Tag>
-      ),
-      filters: [
-        { text: 'Đang áp dụng', value: 1 },
-        { text: 'Không áp dụng', value: 0 },
-      ],
-      onFilter: (value, record) => record.trang_thai === value,
     },
     {
       title: 'Thao tác',
@@ -469,7 +470,10 @@ const ManageCurriculumKnowledge = () => {
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
-        <Title level={2} style={{ margin: 0 }}>Quản lý nhóm kiến thức trong khung chương trình</Title>
+        <Title level={2} style={{ color: '#1890ff' }}>
+          QUẢN LÝ NHÓM KIẾN THỨC TRONG KHUNG CHƯƠNG TRÌNH
+          <BookOutlined style={{ marginLeft: '10px' }} />
+        </Title>
         <div style={{ display: 'flex', gap: '8px' }}>
           <Input
             placeholder="Tìm kiếm..."
@@ -575,7 +579,7 @@ const ManageCurriculumKnowledge = () => {
           >
             <Select 
               placeholder="Chọn khung chương trình"
-              disabled={!!editingId} // Không cho phép sửa khung chương trình nếu đang edit
+              disabled={!!editingId}
             >
               {curriculums.map(curriculum => (
                 <Option key={curriculum.id} value={curriculum.id}>
@@ -588,11 +592,14 @@ const ManageCurriculumKnowledge = () => {
           <Form.Item
             name="nhom_kien_thuc_id"
             label="Nhóm kiến thức"
-            rules={[{ required: true, message: 'Vui lòng chọn nhóm kiến thức!' }]}
+            rules={[
+              { required: true, message: 'Vui lòng chọn nhóm kiến thức!' },
+              { validator: validateGroupCode }
+            ]}
           >
             <Select 
               placeholder="Chọn nhóm kiến thức"
-              disabled={!!editingId} // Không cho phép sửa nhóm kiến thức nếu đang edit
+              disabled={!!editingId}
               onChange={(value) => {
                 const knowledgeGroup = knowledgeGroups.find(k => k.id === value);
                 if (knowledgeGroup) {
