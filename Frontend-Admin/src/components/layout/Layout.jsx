@@ -1,24 +1,14 @@
 import Main from "./Main.jsx";
-import Navbar from "./Navbar.jsx";
 import Footer from "./Footer.jsx";
 import Sidebar from "./Sidebar.jsx";
 import Login from "../../pages/login/Login.jsx";
 import Signup from "../../pages/login/Signup.jsx";
-import React, { useEffect } from "react";
+import React from "react";
 import { useSelector } from 'react-redux';
-import { Routes, Route, useNavigate } from "react-router-dom";
+import { Routes, Route } from "react-router-dom";
 
 const Layout = () => {
   const isAuthenticated = useSelector(state => state.authentication.isAuthenticated);
-  const navigate = useNavigate();
-
-  // useEffect(() => {
-  //   if (!isAuthenticated) {
-  //     navigate("/login");
-  //   }else{
-  //     navigate("/catalog/product/manage");
-  //   }
-  // }, [isAuthenticated]);
 
   return (
     <>
@@ -31,7 +21,6 @@ const Layout = () => {
         <>
           <Sidebar />
           <div className="admin_body">
-            <Navbar />
             <Main />
             <Footer />
           </div>
