@@ -1,7 +1,7 @@
 // ManageLecturer.jsx - Trang quản lý giảng viên
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message, Row, Col, Statistic, Divider, List, Badge } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title } = Typography;
@@ -38,6 +38,20 @@ const ManageLecturer = () => {
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [form] = Form.useForm();
+  const [isStatsModalVisible, setIsStatsModalVisible] = useState(false);
+  const [statsData, setStatsData] = useState({
+    total: 0,
+    byLevel: {},
+    byFaculty: {},
+    roles: {
+      truongKhoa: 0,
+      giangVien: 0
+    },
+    userStatus: {
+      linked: 0,
+      notLinked: 0
+    }
+  });
 
   // Fetch data on component mount
   useEffect(() => {
@@ -48,37 +62,52 @@ const ManageLecturer = () => {
   const fetchLecturers = async () => {
     setLoading(true);
     try {
-      // Fetch lecturers from API
-      const lecturersResponse = await axios.get('/api/giangvien');
-      const lecturersData = lecturersResponse.data.filter(lecturer => lecturer.trangThai === 1); // Only get active lecturers
+      // Get lecturers
+      const res = await axios.get('/api/giangvien');
       
-      // Fetch users from API
-      const usersResponse = await axios.get('/api/user');
-      const usersData = usersResponse.data;
+      // Filter to show only active lecturers (trangThai = 1)
+      const activeLecturers = res.data.filter(lecturer => lecturer.trangThai === 1);
       
-      // Combine lecturer data with user data
-      const lecturersWithUserInfo = lecturersData.map(lecturer => {
-        const user = usersData.find(user => user.id === lecturer.userId);
+      // Get users for the dropdown
+      const usersRes = await axios.get('/api/user');
+      const users = usersRes.data;
+      
+      // Find user details for each lecturer
+      const enrichedLecturers = activeLecturers.map(lecturer => {
+        if (lecturer.userId) {
+          const user = users.find(u => u.id === lecturer.userId);
+          if (user) {
+            return {
+              ...lecturer,
+              user_username: user.username,
+              user_email: user.email
+            };
+          }
+        }
         return {
           ...lecturer,
-          user_email: user ? user.email : 'N/A',
-          user_username: user ? user.username : 'N/A',
-          user_hoTen: user ? user.hoTen : 'N/A'
+          user_username: null,
+          user_email: null
         };
       });
       
-      setLecturers(lecturersWithUserInfo);
+      // Filter out users that are already assigned to lecturers
+      const assignedUserIds = activeLecturers
+        .filter(lecturer => lecturer.userId !== null)
+        .map(lecturer => lecturer.userId);
       
-      // Find users that don't have a lecturer account yet
-      const usedUserIds = lecturersData.map(lecturer => lecturer.userId);
-      const availableUsersList = usersData.filter(user => 
-        !usedUserIds.includes(user.id) && user.vaiTro === 'GIANG_VIEN'
-      );
+      const availableUsersFiltered = users
+        .filter(user => !assignedUserIds.includes(user.id) && user.trangThai === true);
       
-      setAvailableUsers(availableUsersList);
+      setLecturers(enrichedLecturers);
+      setAvailableUsers(availableUsersFiltered);
     } catch (error) {
       console.error('Error fetching lecturers:', error);
-      message.error('Không thể tải danh sách giảng viên');
+      const errorMessage = error.response?.data?.message || 'Không thể tải danh sách giảng viên';
+      message.error(errorMessage);
+      // Set empty arrays as fallback
+      setLecturers([]);
+      setAvailableUsers([]);
     } finally {
       setLoading(false);
     }
@@ -114,21 +143,19 @@ const ManageLecturer = () => {
   // Handle deleting a lecturer
   const handleDelete = async (lecturerId) => {
     Modal.confirm({
-      title: 'Xác nhận xoá giảng viên',
-      content: 'Bạn có chắc chắn muốn xoá hóa giảng viên này? Giảng viên sẽ không còn hiển thị trong danh sách.',
+      title: 'Xác nhận vô hiệu hóa giảng viên',
+      content: 'Bạn có chắc chắn muốn vô hiệu hóa giảng viên này? Giảng viên sẽ không còn hiển thị trong danh sách.',
       okText: 'Xác nhận',
       cancelText: 'Hủy',
       onOk: async () => {
         try {
           setLoading(true);
-          const lecturer = lecturers.find(l => l.id === lecturerId);
-          const updatedLecturer = { ...lecturer, trangThai: 0 };
-          await axios.put(`/api/giangvien/${lecturerId}`, updatedLecturer);
-          message.success('Xoá hóa giảng viên thành công');
+          await axios.delete(`/api/giangvien/${lecturerId}`);
+          message.success('Vô hiệu hóa giảng viên thành công');
           fetchLecturers();
         } catch (error) {
           console.error('Error deactivating lecturer:', error);
-          message.error('Không thể xoá hóa giảng viên');
+          message.error('Không thể vô hiệu hóa giảng viên');
         } finally {
           setLoading(false);
         }
@@ -156,17 +183,20 @@ const ManageLecturer = () => {
     try {
       setLoading(true);
       
+      // Ensure all fields are properly formatted
       const lecturerData = {
         id: editingId || null,
-        maGiangVien: values.maGiangVien,
-        hoTen: values.hoTen,
-        boMon: values.boMon,
-        khoa: values.khoa,
+        maGiangVien: values.maGiangVien?.trim(),
+        hoTen: values.hoTen?.trim(),
+        boMon: values.boMon?.trim(),
+        khoa: values.khoa?.trim(),
         trinhDo: values.trinhDo,
-        chuyenMon: values.chuyenMon,
-        userId: values.userId,
+        chuyenMon: values.chuyenMon?.trim(),
+        userId: values.userId || null, // Ensure null if not provided
         trangThai: 1 // Always set to active
       };
+      
+      console.log('Sending lecturer data:', lecturerData);
       
       if (editingId) {
         // Update existing lecturer
@@ -183,27 +213,42 @@ const ManageLecturer = () => {
       fetchLecturers(); // Refresh the list
     } catch (error) {
       console.error('Error submitting form:', error);
-      message.error('Không thể lưu thông tin giảng viên');
+      const errorMessage = error.response?.data?.message || 'Không thể lưu thông tin giảng viên';
+      message.error(errorMessage);
     } finally {
       setLoading(false);
     }
   };
 
   // Generate a unique lecturer code
-  const generateLecturerCode = () => {
-    const prefix = "GV";
-    const existingCodes = lecturers.map(l => l.maGiangVien);
-    let newCode;
-    let counter = lecturers.length + 1;
-    
-    do {
-      newCode = `${prefix}${counter.toString().padStart(3, '0')}`;
-      counter++;
-    } while (existingCodes.includes(newCode));
-    
-    form.setFieldsValue({
-      maGiangVien: newCode
-    });
+  const generateLecturerCode = async () => {
+    try {
+      setLoading(true);
+      
+      // Fetch all lecturer codes (including inactive ones)
+      const response = await axios.get('/api/giangvien/codes');
+      const existingCodes = response.data || [];
+      
+      const prefix = "GV";
+      let newCode;
+      let counter = 1;
+      
+      do {
+        newCode = `${prefix}${counter.toString().padStart(3, '0')}`;
+        counter++;
+      } while (existingCodes.includes(newCode));
+      
+      form.setFieldsValue({
+        maGiangVien: newCode
+      });
+      
+      message.success('Đã tạo mã giảng viên: ' + newCode);
+    } catch (error) {
+      console.error('Error generating lecturer code:', error);
+      message.error('Không thể tạo mã giảng viên');
+    } finally {
+      setLoading(false);
+    }
   };
 
   // Handle search input change
@@ -222,6 +267,54 @@ const ManageLecturer = () => {
         lecturer.user_email?.toLowerCase().includes(searchText.toLowerCase())
       )
     : lecturers;
+
+  // Calculate statistics for lecturers
+  const calculateStats = () => {
+    // Count total number of lecturers
+    const total = lecturers.length;
+    
+    // Group lecturers by education level
+    const byLevel = lecturers.reduce((acc, lecturer) => {
+      const level = lecturer.trinhDo || 'Không xác định';
+      acc[level] = (acc[level] || 0) + 1;
+      return acc;
+    }, {});
+    
+    // Group lecturers by faculty/department
+    const byFaculty = lecturers.reduce((acc, lecturer) => {
+      const faculty = lecturer.khoa || 'Không xác định';
+      acc[faculty] = (acc[faculty] || 0) + 1;
+      return acc;
+    }, {});
+
+    // Count lecturers with roles (assuming role information is in chuyenMon or boMon field)
+    const roles = {
+      truongKhoa: lecturers.filter(lecturer => 
+        lecturer.chuyenMon?.toLowerCase().includes('trưởng khoa') || 
+        lecturer.boMon?.toLowerCase().includes('trưởng khoa')
+      ).length,
+      giangVien: lecturers.filter(lecturer => 
+        !(lecturer.chuyenMon?.toLowerCase().includes('trưởng khoa') || 
+          lecturer.boMon?.toLowerCase().includes('trưởng khoa'))
+      ).length
+    };
+
+    // Count lecturers with/without user accounts
+    const userStatus = {
+      linked: lecturers.filter(lecturer => lecturer.userId).length,
+      notLinked: lecturers.filter(lecturer => !lecturer.userId).length
+    };
+    
+    setStatsData({
+      total,
+      byLevel,
+      byFaculty,
+      roles,
+      userStatus
+    });
+    
+    setIsStatsModalVisible(true);
+  };
 
   // Define table columns
   const columns = [
@@ -347,7 +440,7 @@ const ManageLecturer = () => {
             size="small"
             onClick={() => handleDelete(record.id)}
           >
-            Xoá
+            Vô hiệu hóa
           </Button>
           {!record.userId && (
             <Select
@@ -386,8 +479,9 @@ const ManageLecturer = () => {
             <Button 
               type="link" 
               size="small" 
-              onClick={generateLecturerCode}
+              onClick={() => generateLecturerCode()}
               style={{ margin: -7 }}
+              loading={loading}
             >
               Tạo mã
             </Button>
@@ -444,20 +538,25 @@ const ManageLecturer = () => {
       <Form.Item
         name="userId"
         label="Tài khoản người dùng"
-        rules={[{ required: true, message: 'Vui lòng chọn tài khoản!' }]}
+        rules={[
+          { 
+            required: !editingId, 
+            message: 'Vui lòng chọn tài khoản!'
+          }
+        ]}
       >
         <Select disabled={!!editingId}>
-          <Option value="">-- Chọn tài khoản --</Option>
+          <Option value={null}>-- Chọn tài khoản --</Option>
           {/* Show the currently assigned user when editing */}
-          {editingId && (
+          {editingId && form.getFieldValue('userId') && (
             <Option value={form.getFieldValue('userId')}>
-              {availableUsers.find(u => u.id === form.getFieldValue('userId'))?.username || 'Unknown'}
+              {lecturers.find(l => l.id === editingId)?.user_username || 'Unknown'}
             </Option>
           )}
           {/* Show available users when adding new */}
           {!editingId && availableUsers.map(user => (
             <Option key={user.id} value={user.id}>
-              {user.username} - {user.hoTen} ({user.email})
+              {user.username} - {user.hoTen || ''} ({user.email || ''})
             </Option>
           ))}
         </Select>
@@ -519,6 +618,13 @@ const ManageLecturer = () => {
           >
             Thêm giảng viên
           </Button>
+          <Button 
+            type="default"
+            icon={<BarChartOutlined />}
+            onClick={calculateStats}
+          >
+            Thống kê
+          </Button>
         </Space>
       </div>
 
@@ -556,6 +662,83 @@ const ManageLecturer = () => {
       `}</style>
 
       <Modal
+        title="Thống kê giảng viên"
+        open={isStatsModalVisible}
+        onCancel={() => setIsStatsModalVisible(false)}
+        footer={[
+          <Button key="close" onClick={() => setIsStatsModalVisible(false)}>
+            Đóng
+          </Button>
+        ]}
+        width={700}
+      >
+        <Row gutter={16}>
+          <Col span={24}>
+            <Statistic 
+              title="Tổng số giảng viên" 
+              value={statsData.total} 
+              valueStyle={{ color: '#1890ff', fontSize: '28px' }}
+              prefix={<PieChartOutlined />}
+            />
+          </Col>
+        </Row>
+        
+        <Divider>Theo trình độ</Divider>
+        <List
+          bordered
+          dataSource={Object.entries(statsData.byLevel)}
+          renderItem={([level, count]) => (
+            <List.Item>
+              <Badge color={getColorForLevel(level)} text={level} /> 
+              <span style={{ marginLeft: 'auto' }}>{count} giảng viên</span>
+            </List.Item>
+          )}
+        />
+        
+        <Divider>Theo vai trò</Divider>
+        <List
+          bordered
+          dataSource={[
+            ['Trưởng khoa', statsData.roles.truongKhoa],
+            ['Giảng viên', statsData.roles.giangVien]
+          ]}
+          renderItem={([role, count]) => (
+            <List.Item>
+              <Badge color={role === 'Trưởng khoa' ? '#f5222d' : '#52c41a'} text={role} /> 
+              <span style={{ marginLeft: 'auto' }}>{count} người</span>
+            </List.Item>
+          )}
+        />
+        
+        <Divider>Theo khoa</Divider>
+        <List
+          bordered
+          dataSource={Object.entries(statsData.byFaculty)}
+          renderItem={([faculty, count]) => (
+            <List.Item>
+              <span>{faculty}</span>
+              <span style={{ marginLeft: 'auto' }}>{count} giảng viên</span>
+            </List.Item>
+          )}
+        />
+        
+        <Divider>Theo trạng thái tài khoản</Divider>
+        <List
+          bordered
+          dataSource={[
+            ['Đã liên kết tài khoản', statsData.userStatus.linked],
+            ['Chưa liên kết tài khoản', statsData.userStatus.notLinked]
+          ]}
+          renderItem={([status, count]) => (
+            <List.Item>
+              <Badge color={status === 'Đã liên kết tài khoản' ? '#52c41a' : '#faad14'} text={status} /> 
+              <span style={{ marginLeft: 'auto' }}>{count} giảng viên</span>
+            </List.Item>
+          )}
+        />
+      </Modal>
+
+      <Modal
         title={editingId ? "Sửa thông tin giảng viên" : "Thêm giảng viên mới"}
         open={isModalVisible}
         onCancel={() => {
@@ -570,6 +753,19 @@ const ManageLecturer = () => {
       </Modal>
     </Card>
   );
+};
+
+// Helper function to generate colors for education levels
+const getColorForLevel = (level) => {
+  const colorMap = {
+    'Thạc sĩ': '#722ed1',
+    'Tiến sĩ': '#1890ff',
+    'Phó Giáo sư': '#52c41a',
+    'Giáo sư': '#faad14',
+    'Không xác định': '#bfbfbf'
+  };
+  
+  return colorMap[level] || '#bfbfbf';
 };
 
 export default ManageLecturer; 

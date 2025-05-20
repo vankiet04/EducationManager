@@ -2,7 +2,7 @@ import * as Icons from "react-icons/tb";
 import Orders from '../../api/Orders.json';
 import Reviews from '../../api/Reviews.json';
 import country from '../../api/country.json';
-import {useParams, Link} from 'react-router-dom'
+import {useParams, Link, useNavigate} from 'react-router-dom'
 import Customers from '../../api/Customers.json';
 import React, { useState, useEffect } from "react";
 import Modal from "../../components/common/Modal.jsx";
@@ -11,7 +11,6 @@ import Input from "../../components/common/Input.jsx";
 import Button from "../../components/common/Button.jsx";
 import Rating from "../../components/common/Rating.jsx";
 import Divider from "../../components/common/Divider.jsx";
-import Toggler from "../../components/common/Toggler.jsx";
 import CheckBox from "../../components/common/CheckBox.jsx";
 import Dropdown from "../../components/common/Dropdown.jsx";
 import Offcanvas from "../../components/common/Offcanvas.jsx";
@@ -19,22 +18,29 @@ import Thumbnail from "../../components/common/Thumbnail.jsx";
 import Accordion from "../../components/common/Accordion.jsx";
 import TableAction from "../../components/common/TableAction.jsx";
 import MultiSelect from "../../components/common/MultiSelect.jsx";
+import axios from "axios";
+import { notification } from "antd";
 
 const EditCustomer = () => {
   const { customerId } = useParams();
+  const navigate = useNavigate();
+  const [roles, setRoles] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [selectedRole, setSelectedRole] = useState(null);
+  const [loadingUser, setLoadingUser] = useState(true);
 
   const customer = Customers.find(customer => customer.id.toString() === customerId.toString());
 
   const [fields, setFields] = useState({
-    name: customer.name,
-    email: customer.contact.email,
-    phone: customer.contact.phone,
-    date: customer.dob,
+    username: "",
+    hoTen: "",
+    email: "",
+    soDienThoai: "",
+    namSinh: "",
     password: "",
     passwordConfirm: "",
-    isVendor: customer.isVendor,
-    status: customer.status,
-    image: customer.image,
+    trangThai: "active",
+    image: "",
     addressName:"",
     addressPhone:"",
     addressZip:"",
@@ -45,6 +51,77 @@ const EditCustomer = () => {
     addressCity:"",
   });
 
+  useEffect(() => {
+    // Fetch roles and user data
+    fetchRoles();
+    fetchUserData();
+  }, [customerId]);
+
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/roles');
+      setRoles(response.data);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      notification.error({
+        message: 'Lỗi',
+        description: 'Không thể tải danh sách vai trò'
+      });
+    }
+  };
+
+  const fetchUserData = async () => {
+    try {
+      setLoadingUser(true);
+      const response = await axios.get(`http://localhost:8080/api/user/${customerId}`);
+      const userData = response.data;
+      
+      // Fetch user roles
+      let userRoles = [];
+      try {
+        const rolesResponse = await axios.get(`http://localhost:8080/api/user/${customerId}/roles`);
+        userRoles = rolesResponse.data;
+      } catch (error) {
+        console.error('Error fetching user roles:', error);
+      }
+      
+      setFields({
+        username: userData.username || "",
+        hoTen: userData.hoTen || "",
+        email: userData.email || "",
+        soDienThoai: userData.soDienThoai || "",
+        namSinh: userData.namSinh?.toString() || "",
+        password: "",
+        passwordConfirm: "",
+        trangThai: userData.trangThai ? "active" : "locked",
+        image: userData.image || "",
+        addressName: "",
+        addressPhone: "",
+        addressZip: "",
+        addressEmail: "",
+        addressStreet: "",
+        addressCountry: "",
+        addressState: "",
+        addressCity: "",
+      });
+      
+      // Set selected role (the first one if multiple exist)
+      if (userRoles.length > 0) {
+        setSelectedRole(userRoles[0].id);
+      }
+      
+      setLoadingUser(false);
+    } catch (error) {
+      console.error('Error fetching user data:', error);
+      notification.error({
+        message: 'Lỗi',
+        description: 'Không thể tải thông tin người dùng'
+      });
+      setLoadingUser(false);
+      navigate('/customers/manage');
+    }
+  };
+
   const handleInputChange = (key, value) => {
     setFields({
       ...fields,
@@ -52,11 +129,85 @@ const EditCustomer = () => {
     });
   };
 
-  const isVendorCheck = (isCheck) => {
+  const handleStatusSelect = (isSelect) => {
     setFields({
       ...fields,
-      isVendor: isCheck,
+      trangThai: isSelect.label,
     });
+  };
+
+  const handleRoleSelect = (roleId) => {
+    setSelectedRole(roleId);
+  };
+
+  const handleSubmit = async () => {
+    // Validate form
+    if (!fields.hoTen || !fields.email) {
+      notification.error({
+        message: 'Lỗi',
+        description: 'Vui lòng điền đầy đủ thông tin bắt buộc (họ tên, email)'
+      });
+      return;
+    }
+
+    if (fields.password && fields.password !== fields.passwordConfirm) {
+      notification.error({
+        message: 'Lỗi',
+        description: 'Mật khẩu xác nhận không khớp'
+      });
+      return;
+    }
+
+    if (!selectedRole) {
+      notification.error({
+        message: 'Lỗi',
+        description: 'Vui lòng chọn vai trò cho người dùng'
+      });
+      return;
+    }
+
+    try {
+      setLoading(true);
+      
+      // Create a proper UserDto object
+      const userData = {
+        hoTen: fields.hoTen,
+        email: fields.email,
+        soDienThoai: fields.soDienThoai,
+        namSinh: fields.namSinh ? parseInt(fields.namSinh) : null,
+        trangThai: fields.trangThai === 'active',
+        roleIds: [selectedRole], // Send the role ID as an array for the roles collection
+        vai_tro: selectedRole // Set vai_tro directly as a number (not string)
+      };
+      
+      // Add password only if changed
+      if (fields.password) {
+        userData.password = fields.password;
+      }
+      
+      // Update user
+      await axios.put(`http://localhost:8080/api/user/${customerId}`, userData);
+      
+      notification.success({
+        message: 'Thành công',
+        description: 'Cập nhật người dùng thành công!'
+      });
+      
+      // Refresh user data
+      fetchUserData();
+      
+    } catch (error) {
+      console.error('Error submitting form:', error);
+      
+      // Show detailed error message
+      notification.error({
+        message: 'Lỗi',
+        description: `Không thể cập nhật thông tin người dùng: ${error.response?.data?.message || error.message}`
+      });
+      
+    } finally {
+      setLoading(false);
+    }
   };
 
   const [status, setStatus] = useState([
@@ -70,20 +221,6 @@ const EditCustomer = () => {
     },
   ]);
 
-  const handleStatusSelect = (isSelect) => {
-    setFields({
-      ...fields,
-      status: isSelect.label,
-    });
-  };
-
-  const handleCountrySelect = (isSelect) => {
-    setFields({
-      ...fields,
-      status: isSelect.label,
-    });
-  };
-
   const [isOffcanvasOpen, setIsOffcanvasOpen] = useState(false);
 
   const handleOpenOffcanvas = () => {
@@ -92,6 +229,13 @@ const EditCustomer = () => {
 
   const handleCloseOffcanvas = () => {
     setIsOffcanvasOpen(false);
+  };
+
+  const handleCountrySelect = (country) => {
+    setFields({
+      ...fields,
+      addressCountry: country.label,
+    });
   };
 
    const actionItems = ["Delete", "View"];
@@ -110,21 +254,32 @@ const EditCustomer = () => {
         <div className="wrapper">
           <div className="content">
             <div className="content_item">
-              <h2 className="sub_heading">Detail</h2>
+              <h2 className="sub_heading">Chi tiết người dùng {loadingUser ? "(Đang tải...)" : ""}</h2>
               <div className="column">
                 <Input
                   type="text"
-                  placeholder="Enter the customer name"
-                  label="Name"
+                  placeholder="Tên đăng nhập"
+                  label="Tên đăng nhập"
                   icon={<Icons.TbUser />}
-                  value={fields.name}
-                  onChange={(value) => handleInputChange("name", value)}
+                  value={fields.username}
+                  onChange={(value) => handleInputChange("username", value)}
+                  disabled={true}
                 />
               </div>
               <div className="column">
                 <Input
                   type="text"
-                  placeholder="Enter the customer email"
+                  placeholder="Nhập họ và tên"
+                  label="Họ và tên"
+                  icon={<Icons.TbUser />}
+                  value={fields.hoTen}
+                  onChange={(value) => handleInputChange("hoTen", value)}
+                />
+              </div>
+              <div className="column">
+                <Input
+                  type="text"
+                  placeholder="Nhập email"
                   label="Email"
                   icon={<Icons.TbMail />}
                   value={fields.email}
@@ -132,37 +287,30 @@ const EditCustomer = () => {
                 />
               </div>
               <div className="column">
-                <Toggler
-                  label="Is Vendor"
-                  checked={fields.isVendor}
-                  onChange={isVendorCheck}
-                />
-              </div>
-              <div className="column">
                 <Input
                   type="tel"
-                  placeholder="Enter the customer phone"
-                  label="Phone"
+                  placeholder="Nhập số điện thoại"
+                  label="Số điện thoại"
                   icon={<Icons.TbPhone />}
-                  value={fields.phone}
-                  onChange={(value) => handleInputChange("phone", value)}
+                  value={fields.soDienThoai}
+                  onChange={(value) => handleInputChange("soDienThoai", value)}
                 />
               </div>
               <div className="column">
                 <Input
-                  type="date"
-                  placeholder="Enter the customer phone"
-                  label="Date"
+                  type="number"
+                  placeholder="Nhập năm sinh"
+                  label="Năm sinh"
                   icon={<Icons.TbCalendar />}
-                  value={fields.date}
-                  onChange={(value) => handleInputChange("date", value)}
+                  value={fields.namSinh}
+                  onChange={(value) => handleInputChange("namSinh", value)}
                 />
               </div>
               <div className="column">
                 <Input
                   type="password"
-                  placeholder="Enter the customer password"
-                  label="password"
+                  placeholder="Nhập mật khẩu mới (để trống nếu không thay đổi)"
+                  label="Mật khẩu"
                   icon={<Icons.TbLock />}
                   value={fields.password}
                   onChange={(value) => handleInputChange("password", value)}
@@ -171,12 +319,43 @@ const EditCustomer = () => {
               <div className="column">
                 <Input
                   type="password"
-                  placeholder="Enter the customer password confirmation"
-                  label="password confirmation"
+                  placeholder="Xác nhận mật khẩu mới"
+                  label="Xác nhận mật khẩu"
                   icon={<Icons.TbLockCheck />}
                   value={fields.passwordConfirm}
                   onChange={(value) => handleInputChange("passwordConfirm", value)}
                 />
+              </div>
+              <div className="column">
+                <h3>Vai trò</h3>
+                <div style={{display: 'flex', flexDirection: 'column', gap: '10px', marginTop: '10px'}}>
+                  {roles.map(role => (
+                    <div key={role.id} style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '10px',
+                      padding: '8px 12px',
+                      borderRadius: '5px',
+                      border: '1px solid #ccc',
+                      cursor: 'pointer',
+                      backgroundColor: selectedRole === role.id ? '#1890ff' : 'transparent',
+                      color: selectedRole === role.id ? 'white' : 'inherit'
+                    }} onClick={() => handleRoleSelect(role.id)}>
+                      <input 
+                        type="radio" 
+                        name="role" 
+                        checked={selectedRole === role.id} 
+                        onChange={() => handleRoleSelect(role.id)}
+                      />
+                      <span>{role.name}</span>
+                    </div>
+                  ))}
+                </div>
+                {!selectedRole && (
+                  <div style={{color: 'red', marginTop: '5px', fontSize: '12px'}}>
+                    Vui lòng chọn vai trò cho người dùng
+                  </div>
+                )}
               </div>
             </div>
             <div className="content_item">
@@ -221,8 +400,8 @@ const EditCustomer = () => {
                         placeholder="Zip code"
                         label="Zip code"
                         className="sm"
-                        value={fields.AddressZipCode}
-                        onChange={(value) => handleInputChange("addressZipCode", value)}
+                        value={fields.addressZip}
+                        onChange={(value) => handleInputChange("addressZip", value)}
                       />
                     </div>
                     <div className="column_3">
@@ -385,7 +564,7 @@ const EditCustomer = () => {
                             <TableAction
                               actionItems={actionItems}
                               onActionItemClick={(item) =>
-                                handleActionItemClick(item, product.id)
+                                handleActionItemClick(item, customer.id)
                               }
                             />
                           </td>
@@ -468,32 +647,34 @@ const EditCustomer = () => {
           </div>
           <div className="sidebar">
             <div className="sidebar_item">
-              <h2 className="sub_heading">Publish</h2>
+              <h2 className="sub_heading">Lưu</h2>
               <Button
-                label="save & exit"
+                label={loading ? "Đang lưu..." : "Lưu thay đổi"}
                 icon={<Icons.TbDeviceFloppy />}
                 className=""
+                onClick={handleSubmit}
+                disabled={loading || loadingUser}
               />
               <Button
-                label="save"
-                icon={<Icons.TbCircleCheck />}
-                className="success"
+                label="Trở về"
+                icon={<Icons.TbArrowLeft />}
+                className="secondary"
+                onClick={() => navigate('/customers/manage')}
               />
             </div>
             <div className="sidebar_item">
-              <h2 className="sub_heading">Status</h2>
+              <h2 className="sub_heading">Trạng thái</h2>
               <div className="column">
                 <Dropdown
-                  placeholder="select stock status"
-                  selectedValue={fields.status}
+                  placeholder="Chọn trạng thái"
+                  selectedValue={fields.trangThai}
                   onClick={handleStatusSelect}
                   options={status}
-                  // className="sm"
                 />
               </div>
             </div>
             <div className="sidebar_item">
-              <h2 className="sub_heading">Image</h2>
+              <h2 className="sub_heading">Ảnh đại diện</h2>
               <div className="column">
                 <Thumbnail
                   preloadedImage={fields.image}

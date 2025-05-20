@@ -1,7 +1,7 @@
 package com.example.net.guides.springboot.model;
 
-import java.util.ArrayList;
-import java.util.List;
+import java.util.HashSet;
+import java.util.Set;
 
 import jakarta.annotation.Generated;
 import jakarta.persistence.Column;
@@ -48,6 +48,14 @@ public class User {
     
     @Column(name = "vai_tro", length = 50)
     private String vaiTro;
+    
+    @ManyToMany(fetch = FetchType.EAGER)
+    @JoinTable(
+        name = "user_roles", 
+        joinColumns = @JoinColumn(name = "user_id"),
+        inverseJoinColumns = @JoinColumn(name = "role_id")
+    )
+    private Set<Role> roles = new HashSet<>();
 
     public User() {
     }
@@ -129,5 +137,21 @@ public class User {
     
     public void setVaiTro(String vaiTro) {
         this.vaiTro = vaiTro;
+    }
+    
+    public Set<Role> getRoles() {
+        return roles;
+    }
+    
+    public void setRoles(Set<Role> roles) {
+        this.roles = roles;
+    }
+    
+    public void addRole(Role role) {
+        this.roles.add(role);
+    }
+    
+    public void removeRole(Role role) {
+        this.roles.remove(role);
     }
 }

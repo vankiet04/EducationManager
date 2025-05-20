@@ -4,12 +4,6 @@ import { ReadOutlined, BookOutlined, ClusterOutlined, NodeIndexOutlined, FileTex
 
 // Navigation Items
 const navigation = [
-  // Dashboard
-  {
-    name: "Dashboard",
-    url: "/",
-    icon: <Icons.TbLayout className="menu_icon" />,
-  },
   // Quản lý người dùng - User Management
   {
     name: "Quản lý người dùng",

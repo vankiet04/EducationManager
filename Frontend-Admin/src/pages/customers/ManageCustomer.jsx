@@ -1,9 +1,15 @@
 // ManageCustomer.jsx - Trang quản lý người dùng
-import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Dropdown, Menu } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  LockOutlined, UnlockOutlined, ReloadOutlined, EyeOutlined, EllipsisOutlined, FilterOutlined, InfoCircleOutlined, 
-  TeamOutlined } from '@ant-design/icons';
+import { useState, useEffect } from 'react';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag } from 'antd';
+import { 
+  SearchOutlined, 
+  PlusOutlined, 
+  EditOutlined, 
+  DeleteOutlined, 
+  ReloadOutlined, 
+  InfoCircleOutlined, 
+  TeamOutlined 
+} from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title } = Typography;
@@ -11,6 +17,7 @@ const { Option } = Select;
 
 const ManageCustomer = () => {
   const [users, setUsers] = useState([]);
+  const [roles, setRoles] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [isDetailModalVisible, setIsDetailModalVisible] = useState(false);
@@ -22,6 +29,7 @@ const ManageCustomer = () => {
   // Fetch data on component mount
   useEffect(() => {
     fetchUsers();
+    fetchRoles();
   }, []);
 
   // Fetch user data from backend API
@@ -41,15 +49,74 @@ const ManageCustomer = () => {
     }
   };
 
+  // Fetch roles data from backend API
+  const fetchRoles = async () => {
+    try {
+      const response = await axios.get('http://localhost:8080/api/roles');
+      setRoles(response.data);
+    } catch (error) {
+      console.error('Error fetching roles:', error);
+      Modal.error({
+        title: 'Lỗi',
+        content: 'Không thể tải danh sách vai trò'
+      });
+    }
+  };
+
   // Handle viewing a user
   const handleViewDetail = (record) => {
-    setDetailUser(record);
-    setIsDetailModalVisible(true);
+    // Fetch user roles if available
+    fetchUserRoles(record.id).then(() => {
+      setDetailUser(record);
+      setIsDetailModalVisible(true);
+    });
+  };
+
+  // Fetch user roles
+  const fetchUserRoles = async (userId) => {
+    try {
+      const response = await axios.get(`http://localhost:8080/api/user/${userId}/roles`);
+      const userIndex = users.findIndex(user => user.id === userId);
+      if (userIndex !== -1) {
+        const updatedUsers = [...users];
+        updatedUsers[userIndex] = { 
+          ...updatedUsers[userIndex], 
+          userRoles: response.data 
+        };
+        setUsers(updatedUsers);
+      }
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching user roles:', error);
+      return [];
+    }
   };
 
   // Handle editing a user
-  const handleEdit = (record) => {
+  const handleEdit = async (record) => {
     setEditingId(record.id);
+    
+    // Fetch user roles if not already loaded
+    let userRoles = record.userRoles;
+    if (!userRoles) {
+      userRoles = await fetchUserRoles(record.id);
+    }
+    
+    // Determine the role ID to use
+    let roleId = null;
+    
+    // First check if user has roles from the userRoles collection
+    if (userRoles && userRoles.length > 0) {
+      roleId = userRoles[0].id; // Use the first role ID
+    } 
+    // Otherwise try to get role from vai_tro field
+    else if (record.vai_tro) {
+      const parsedRoleId = parseInt(record.vai_tro, 10);
+      if (!isNaN(parsedRoleId)) {
+        roleId = parsedRoleId;
+      }
+    }
+    
     form.setFieldsValue({
       username: record.username,
       hoTen: record.hoTen,
@@ -57,16 +124,17 @@ const ManageCustomer = () => {
       soDienThoai: record.soDienThoai,
       namSinh: record.namSinh,
       trangThai: record.trangThai,
-      vaiTro: record.vaiTro
+      roleIds: roleId // Set a single role ID, not an array
     });
+    
     setIsModalVisible(true);
   };
 
   // Handle deleting a user
   const handleDelete = async (userId) => {
     Modal.confirm({
-      title: 'Xác nhận xóa',
-      content: 'Bạn có chắc chắn muốn xóa người dùng này?',
+      title: 'Xác nhận vô hiệu hóa',
+      content: 'Bạn có chắc chắn muốn vô hiệu hóa người dùng này?',
       onOk: async () => {
         try {
           setLoading(true);
@@ -74,16 +142,16 @@ const ManageCustomer = () => {
           
           Modal.success({
             title: 'Thành công',
-            content: 'Xóa người dùng thành công!'
+            content: 'Vô hiệu hóa người dùng thành công!'
           });
           
           fetchUsers(); // Refresh the user list
           setLoading(false);
         } catch (error) {
-          console.error('Error deleting user:', error);
+          console.error('Error deactivating user:', error);
           Modal.error({
             title: 'Lỗi',
-            content: `Không thể xóa người dùng: ${error.response?.data?.message || error.message}`
+            content: `Không thể vô hiệu hóa người dùng: ${error.response?.data?.message || error.message}`
           });
           setLoading(false);
         }
@@ -128,6 +196,11 @@ const ManageCustomer = () => {
     try {
       setLoading(true);
       
+      // Ensure roleIds is a single value (not an array)
+      const roleId = Array.isArray(values.roleIds) 
+        ? values.roleIds[0] 
+        : values.roleIds;
+      
       // Create a proper UserDto object
       const userData = {
         username: values.username,
@@ -137,7 +210,8 @@ const ManageCustomer = () => {
         soDienThoai: values.soDienThoai,
         namSinh: values.namSinh ? parseInt(values.namSinh) : null,
         trangThai: values.trangThai,
-        vaiTro: values.vaiTro
+        roleIds: [roleId], // Send as array for the API
+        vai_tro: roleId // Send as a number, not string
       };
       
       console.log('Sending user data:', userData);
@@ -152,7 +226,7 @@ const ManageCustomer = () => {
         });
       } else {
         // Add new user - using the /register endpoint for better validation
-        const response = await axios.post('http://localhost:8080/api/user/register', userData);
+        await axios.post('http://localhost:8080/api/user/register', userData);
         
         Modal.success({
           title: 'Thành công',
@@ -230,16 +304,45 @@ const ManageCustomer = () => {
     },
     {
       title: 'Vai trò',
-      dataIndex: 'vaiTro',
-      key: 'vaiTro',
+      dataIndex: 'vai_tro',
+      key: 'vai_tro',
       width: 150,
-      render: (vaiTro) => (
-        <span>
-          <Tag color="blue">
-            {vaiTro}
-          </Tag>
-        </span>
-      ),
+      render: (vai_tro, record) => {
+        // If userRoles has been loaded, use it
+        if (record.userRoles && record.userRoles.length > 0) {
+          return (
+            <span>
+              {record.userRoles.map(role => (
+                <Tag color="green" key={role.id}>
+                  {role.name}
+                </Tag>
+              ))}
+            </span>
+          );
+        }
+        
+        // If vai_tro is a number (role ID), find the corresponding role name
+        if (typeof vai_tro === 'number' || (typeof vai_tro === 'string' && !isNaN(parseInt(vai_tro, 10)))) {
+          const roleId = typeof vai_tro === 'string' ? parseInt(vai_tro, 10) : vai_tro;
+          const role = roles.find(r => r.id === roleId);
+          if (role) {
+            return (
+              <Tag color="green">
+                {role.name}
+              </Tag>
+            );
+          }
+        }
+        
+        // Fetch user roles if not yet loaded
+        if (!record.userRoles) {
+          fetchUserRoles(record.id);
+        }
+        
+        return (
+          <Tag color="default">Đang tải vai trò...</Tag>
+        );
+      },
     },
     {
       title: 'Năm sinh',
@@ -278,7 +381,7 @@ const ManageCustomer = () => {
             icon={<DeleteOutlined />} 
             onClick={() => handleDelete(record.id)}
           >
-            Xóa
+            Vô hiệu hóa
           </Button>
           <Button
             icon={<InfoCircleOutlined />}
@@ -370,9 +473,39 @@ const ManageCustomer = () => {
             <p><strong>Năm sinh:</strong> {detailUser.namSinh}</p>
             <p>
               <strong>Vai trò:</strong>{' '}
-              <Tag color="blue">
-                {detailUser.vaiTro}
-              </Tag>
+              {detailUser.userRoles && detailUser.userRoles.length > 0 ? 
+                detailUser.userRoles.map(role => (
+                  <Tag color="green" key={role.id}>
+                    {role.name}
+                  </Tag>
+                )) : 
+                (() => {
+                  console.log("Detail user vai_tro:", detailUser.vai_tro, "type:", typeof detailUser.vai_tro);
+                  
+                  const vaiTro = detailUser.vai_tro;
+                  // Convert to number if it's a string
+                  const roleId = typeof vaiTro === 'string' ? parseInt(vaiTro, 10) : vaiTro;
+                  
+                  // Simple direct match with role ID
+                  if (roleId !== null && roleId !== undefined && !isNaN(roleId)) {
+                    const role = roles.find(r => r.id === roleId);
+                    if (role) {
+                      return (
+                        <Tag color="green">
+                          {role.name}
+                        </Tag>
+                      );
+                    }
+                  }
+                  
+                  // Fallback - display vai_tro as-is if it has a value
+                  if (vaiTro) {
+                    return <Tag color="blue">{vaiTro}</Tag>;
+                  }
+                  
+                  return <span>Chưa có vai trò</span>;
+                })()
+              }
             </p>
             <p>
               <strong>Trạng thái:</strong>{' '}
@@ -453,14 +586,17 @@ const ManageCustomer = () => {
           </Form.Item>
           
           <Form.Item
-            name="vaiTro"
+            name="roleIds"
             label="Vai trò"
-            initialValue="NGUOI_DUNG"
+            rules={[{ required: true, message: 'Vui lòng chọn vai trò!' }]}
           >
-            <Select placeholder="Chọn vai trò">
-              <Option value="ADMIN">Admin</Option>
-              <Option value="NGUOI_DUNG">Người dùng</Option>
-              <Option value="GIANG_VIEN">Giảng viên</Option>
+            <Select 
+              placeholder="Chọn vai trò"
+              optionFilterProp="children"
+            >
+              {roles.map(role => (
+                <Option key={role.id} value={role.id}>{role.name}</Option>
+              ))}
             </Select>
           </Form.Item>
           
@@ -498,14 +634,24 @@ const ManageCustomer = () => {
         .table-container {
           width: 100%;
           overflow-x: auto;
-          margin-bottom: 16px;
         }
         .action-column {
-          background: white;
-          box-shadow: 0 0 4px rgba(0, 0, 0, 0.03);
+          text-align: center;
         }
         .action-buttons {
-          white-space: nowrap;
+          display: flex;
+          justify-content: space-around;
+        }
+        .ant-btn {
+          text-transform: capitalize;
+          border-radius: 4px;
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 6px;
+        }
+        .ant-select-selector, .ant-input {
+          border-radius: 4px !important;
         }
       `}</style>
     </Card>

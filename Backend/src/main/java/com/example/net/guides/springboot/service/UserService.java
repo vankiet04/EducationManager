@@ -17,4 +17,8 @@ public interface UserService {
     User updateUser(Integer userId, UserDto userDto);
     Optional<User> findUserById(Integer userId);
     void deleteUser(Integer userId);
+    
+    // Email validation methods
+    boolean isEmailUnique(String email);
+    boolean isEmailUniqueForUpdate(String email, Integer userId);
 }

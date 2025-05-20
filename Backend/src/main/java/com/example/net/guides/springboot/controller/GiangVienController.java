@@ -74,24 +74,45 @@ public class GiangVienController {
     }
 
     @PostMapping
-    public ResponseEntity<GiangVien> create(@RequestBody GiangVien giangVien) {
-        return ResponseEntity.ok(giangVienService.save(giangVien));
+    public ResponseEntity<?> create(@RequestBody GiangVien giangVien) {
+        try {
+            GiangVien savedGiangVien = giangVienService.save(giangVien);
+            return ResponseEntity.ok(savedGiangVien);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Thêm giảng viên thất bại: " + e.getMessage()));
+        }
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<GiangVien> update(@PathVariable Integer id, @RequestBody GiangVien giangVien) {
-        if (giangVienService.getById(id) != null) {
+    public ResponseEntity<?> update(@PathVariable Integer id, @RequestBody GiangVien giangVien) {
+        try {
+            GiangVien existingGiangVien = giangVienService.getById(id);
+            if (existingGiangVien == null) {
+                return ResponseEntity.status(HttpStatus.NOT_FOUND)
+                    .body(Map.of("message", "Giảng viên không tồn tại"));
+            }
+            
             giangVien.setId(id);
-            return ResponseEntity.ok(giangVienService.save(giangVien));
+            GiangVien updatedGiangVien = giangVienService.save(giangVien);
+            return ResponseEntity.ok(updatedGiangVien);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                .body(Map.of("message", e.getMessage()));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                .body(Map.of("message", "Cập nhật giảng viên thất bại: " + e.getMessage()));
         }
-        return ResponseEntity.notFound().build();
     }
 
     @DeleteMapping("/{id}")
-    public ResponseEntity<GiangVien> delete(@PathVariable Integer id) {
+    public ResponseEntity<?> delete(@PathVariable Integer id) {
         GiangVien giangVien = giangVienService.delete(id);
         if (giangVien != null) {
-            return ResponseEntity.ok(giangVien);
+            return ResponseEntity.ok(Map.of("message", "Vô hiệu hóa giảng viên thành công"));
         }
         return ResponseEntity.notFound().build();
     }
@@ -122,5 +143,11 @@ public class GiangVienController {
             return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
                 .body(Map.of("message", "Hủy gán người dùng cho giảng viên thất bại: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/codes")
+    public ResponseEntity<List<String>> getAllLecturerCodes() {
+        List<String> codes = giangVienService.getAllLecturerCodes();
+        return ResponseEntity.ok(codes);
     }
 } 

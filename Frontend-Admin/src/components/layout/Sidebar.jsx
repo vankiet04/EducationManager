@@ -2,12 +2,14 @@ import React, { useState, useEffect } from 'react';
 import * as Icons from 'react-icons/tb';
 import { useDispatch } from 'react-redux';
 import Logo from '../../images/common/logo.svg';
-import { Link, NavLink, useLocation } from 'react-router-dom';
+import LogoDHSG from '../../images/common/logoDHSG.png';
+import { Link, NavLink, useLocation, useNavigate } from 'react-router-dom';
 import navigation from '../../api/navigation.jsx';
 import {logout} from '../../store/slices/authenticationSlice.jsx';
 
 const Sidebar = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
   const [toggle, setToggle] = useState(null);
   const [sidebar, setSidebar] = useState(false);
   const location = useLocation();
@@ -45,18 +47,18 @@ const Sidebar = () => {
   };
 
   const handleIsLogout = () => {
-    dispatch(logout())
+    dispatch(logout());
+    navigate('/login');
   };
 
   return (
     <div className={`sidemenu ${sidebar ? 'active' : ''}`}>
       {/* Admin User */}
       <div className="sidebar_profile">
-        {/*<Link to="/" className="logo">
-          <img src={Logo} alt="logo" />
-        </Link>*/}
-
-        <h2 className="logo_text">Your Logo</h2>
+        <div className="logo-container" style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
+          <img src={LogoDHSG} alt="DHSG Logo" style={{ height: '40px', width: 'auto' }} />
+          <h2 className="logo_text">EduManager</h2>
+        </div>
         <Link className="navbar_icon menu_sidebar" onClick={handleSidebar}>
           <Icons.TbChevronsLeft className={`${sidebar ? 'active' : ''}`} />
         </Link>
@@ -145,6 +147,29 @@ const Sidebar = () => {
         .menu_link.active .menu_icon {
           color: white !important;
           stroke: white !important;
+        }
+        .logo-container {
+          width: 100%;
+          padding: 0 5px;
+          overflow: hidden;
+          white-space: nowrap;
+        }
+        .logo_text {
+          font-size: 14px;
+          font-weight: 600;
+          line-height: 1.2;
+          margin: 0;
+          color: white;
+          flex: 1;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .sidebar_profile {
+          padding: 15px 10px;
+          display: flex;
+          align-items: center;
+          justify-content: space-between;
+          border-bottom: 1px solid #eee;
         }
       `}</style>
     </div>

@@ -2,6 +2,7 @@ package com.example.net.guides.springboot.service;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
@@ -51,15 +52,63 @@ public class GiangVienService {
 
     @Transactional
     public GiangVien save(GiangVien giangVien) {
-        // If this is a new lecturer with a user ID, make sure the user has GIANG_VIEN role
-        if (giangVien.getUserId() != null) {
-            User user = userRepository.findById(giangVien.getUserId()).orElse(null);
-            if (user != null && !"GIANG_VIEN".equals(user.getVaiTro())) {
-                user.setVaiTro("GIANG_VIEN");
-                userRepository.save(user);
+        try {
+            // Validate required fields
+            if (giangVien.getMaGiangVien() == null || giangVien.getMaGiangVien().isEmpty()) {
+                throw new RuntimeException("Mã giảng viên không được để trống");
             }
+            
+            if (giangVien.getHoTen() == null || giangVien.getHoTen().isEmpty()) {
+                throw new RuntimeException("Họ tên không được để trống");
+            }
+            
+            // Set default value for trangThai if null
+            if (giangVien.getTrangThai() == null) {
+                giangVien.setTrangThai(1); // Default to active
+            }
+            
+            // If this is a new lecturer, check if maGiangVien is already taken
+            if (giangVien.getId() == null) {
+                GiangVien existingLecturer = giangVienRepository.findByMaGiangVien(giangVien.getMaGiangVien());
+                if (existingLecturer != null) {
+                    throw new RuntimeException("Mã giảng viên đã tồn tại");
+                }
+            } else {
+                // If updating, ensure not trying to use an existing code
+                GiangVien existingLecturer = giangVienRepository.findByMaGiangVien(giangVien.getMaGiangVien());
+                if (existingLecturer != null && !existingLecturer.getId().equals(giangVien.getId())) {
+                    throw new RuntimeException("Mã giảng viên đã tồn tại");
+                }
+            }
+            
+            // If this is a new lecturer with a user ID, make sure the user has GIANG_VIEN role
+            if (giangVien.getUserId() != null) {
+                User user = userRepository.findById(giangVien.getUserId()).orElse(null);
+                if (user == null) {
+                    throw new RuntimeException("Người dùng không tồn tại");
+                }
+                
+                // Check if the user is already assigned to another lecturer
+                if (giangVien.getId() == null) { // Only for new lecturers
+                    GiangVien existingGiangVien = giangVienRepository.findByUserId(giangVien.getUserId());
+                    if (existingGiangVien != null) {
+                        throw new RuntimeException("Người dùng đã được gán cho giảng viên khác");
+                    }
+                }
+                
+                // Update user role if needed
+                if (!"GIANG_VIEN".equals(user.getVaiTro())) {
+                    user.setVaiTro("GIANG_VIEN");
+                    userRepository.save(user);
+                }
+            }
+            
+            return giangVienRepository.save(giangVien);
+        } catch (RuntimeException e) {
+            throw e;
+        } catch (Exception e) {
+            throw new RuntimeException("Lỗi khi lưu thông tin giảng viên: " + e.getMessage(), e);
         }
-        return giangVienRepository.save(giangVien);
     }
     
     @Transactional
@@ -119,5 +168,14 @@ public class GiangVienService {
         }
         
         return null;
+    }
+
+    public List<String> getAllLecturerCodes() {
+        // Fetch all lecturer codes, including those with trangThai = 0
+        List<GiangVien> allLecturers = giangVienRepository.findAll();
+        return allLecturers.stream()
+                .filter(gv -> gv.getMaGiangVien() != null && !gv.getMaGiangVien().isEmpty())
+                .map(GiangVien::getMaGiangVien)
+                .collect(Collectors.toList());
     }
 } 

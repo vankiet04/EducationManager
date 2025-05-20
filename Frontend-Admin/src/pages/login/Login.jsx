@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import * as Icons from 'react-icons/tb';
 import { useDispatch } from 'react-redux';
-import Logo from "../../images/common/logo-dark.svg";
+import UniversityImage from "../../images/common/daihocsaigon.jpg";
 import Input from '../../components/common/Input.jsx';
 import Button from '../../components/common/Button.jsx';
 import CheckBox from '../../components/common/CheckBox.jsx';
@@ -10,9 +10,10 @@ import {login} from '../../store/slices/authenticationSlice.jsx';
 
 const Login = () => {
   const dispatch = useDispatch();
+  const navigate = useNavigate();
 
   const [formData, setFormData] = useState({
-    email: "",
+    username: "",
     password: "",
   });
   const [isRemember, setIsRemember] = useState(false);
@@ -36,8 +37,10 @@ const Login = () => {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (formData.email === "eventadmin@gmail.com" && formData.password === "eventadmin") {
-      dispatch(login())
+    if ((formData.username === "admin" && formData.password === "admin") || 
+        (formData.username === "admin2" && formData.password === "123456")) {
+      dispatch(login());
+      navigate('/');
     } else {
       setLoginError(true);
       setTimeout(() => {
@@ -47,70 +50,69 @@ const Login = () => {
   };
 
   return (
-    <div className="login">
-      <div className="login_sidebar">
-        <figure className="login_image">
-          <img src="https://images.unsplash.com/photo-1694537745985-34eacdf76139?ixlib=rb-4.0.3&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&w=2069&q=80" alt="" />
-        </figure>
-      </div>
-      <div className="login_form">
-        <div className="login_content">
-          <div to="/" className="logo">
-            <img src={Logo} alt="logo" />
-          </div>
-          <h2 className="page_heading">Login</h2>
+    <div className="login" style={{ display: 'flex', minHeight: '100vh' }}>
+      {/* Left side - Login Form */}
+      <div className="login_form" style={{ flex: '1', padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+        <div className="login_content" style={{ marginBottom: '30px', textAlign: 'center' }}>
+          <h2 className="page_heading" style={{ fontSize: '28px', fontWeight: '600', color: '#333' }}>EduManager Login</h2>
         </div>
-        <form className="form" onSubmit={handleLogin}>
-          <div className="form_control">
+        <form className="form" onSubmit={handleLogin} style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
+          <div className="form_control" style={{ marginBottom: '20px' }}>
             <Input
               type="text"
-              value={formData.email}
-              onChange={(value) =>
-                handleInputChange("email", value)
-              }
-              placeholder="Email or Phone Number"
-              icon={<Icons.TbMail/>}
-              label="Email or Number"
+              value={formData.username}
+              onChange={(value) => handleInputChange("username", value)}
+              placeholder="Username"
+              icon={<Icons.TbUser/>}
+              label="Username"
             />
           </div>
-          <div className="form_control">
+          <div className="form_control" style={{ marginBottom: '20px' }}>
             <Input
               type={showPassword ? "text" : "password"}
               value={formData.password}
-              onChange={(value) =>
-                handleInputChange("password", value)
-              }
+              onChange={(value) => handleInputChange("password", value)}
               placeholder="Password"
               label="Password"
               onClick={handleShowPassword}
               icon={<Icons.TbEye/>}
             />
           </div>
-          <div className="form_control">
+          <div className="form_control" style={{ marginBottom: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
             <CheckBox
               id="rememberCheckbox"
               label="Remember me"
               checked={isRemember}
               onChange={handleRememberChange}
             />
+            <Link to="#" style={{ color: '#1163d7', fontSize: '14px', textDecoration: 'none' }}>Forgot Password?</Link>
           </div>
-          {loginError && <small className="incorrect">Incorrect email or password and Remember me</small>}
+          {loginError && <div className="incorrect" style={{ color: 'red', marginBottom: '15px', fontSize: '14px' }}>Incorrect username or password</div>}
           <div className="form_control">
             <Button
               label="Login"
               type="submit"
+              style={{ width: '100%', padding: '12px', backgroundColor: '#1163d7' }}
             />
           </div>
         </form>
-        <p className="signup_link">
-          Don't have an account yet? <Link to="/signup">Join Metronic</Link>
+        <p className="login_footer" style={{ textAlign: 'center', marginTop: '30px', fontSize: '14px', color: '#666' }}>
+          © 2025 EduManager - Hệ thống quản lý đào tạo
         </p>
-        <button className="google_signin">
-          <figure>
-            <img src="https://img.icons8.com/color/1000/google-logo.png" alt="" />
-          </figure>
-          <h2>Sign in with Google</h2>
-        </button>
+      </div>
+      
+      {/* Right side - University Image */}
+      <div className="login_image_container" style={{ flex: '1', position: 'relative' }}>
+        <img 
+          src={UniversityImage} 
+          alt="Trường Đại học Sài Gòn" 
+          style={{ 
+            width: '100%', 
+            height: '100%', 
+            objectFit: 'cover',
+            objectPosition: 'center'
+          }} 
+        />
       </div>
     </div>
   );

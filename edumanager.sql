@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 15, 2025 at 05:59 AM
+-- Generation Time: May 20, 2025 at 03:50 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -40,24 +40,30 @@ CREATE TABLE `cotdiem` (
 --
 
 INSERT INTO `cotdiem` (`id`, `decuong_id`, `ten_cot_diem`, `ty_le_phan_tram`, `hinh_thuc`) VALUES
-(1, 1, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
-(2, 1, 'Điểm thảo luận', 20.00, 'Thảo luận nhóm'),
-(3, 1, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm'),
-(4, 1, 'Điểm thi cuối kỳ', 50.00, 'Tự luận'),
-(5, 2, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
-(6, 2, 'Điểm bài tập', 20.00, 'Bài tập về nhà'),
-(7, 2, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm + Tự luận'),
-(8, 2, 'Điểm thi thực hành', 50.00, 'Bài tập lớn'),
-(9, 3, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
-(10, 3, 'Điểm bài tập', 15.00, 'Bài tập về nhà'),
-(11, 3, 'Điểm kiểm tra', 15.00, 'Trắc nghiệm'),
-(12, 3, 'Điểm đồ án', 20.00, 'Đồ án nhóm'),
-(13, 3, 'Điểm thi thực hành', 40.00, 'Thực hành cá nhân'),
-(14, 4, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
-(15, 4, 'Điểm thảo luận', 10.00, 'Thảo luận nhóm'),
-(16, 4, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm'),
-(17, 4, 'Điểm đồ án', 30.00, 'Đồ án nhóm'),
-(18, 4, 'Điểm thi cuối kỳ', 30.00, 'Tự luận');
+(20, 1, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(21, 1, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(22, 1, 'Điểm thảo luận', 10.00, 'Thảo luận nhóm'),
+(23, 1, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm'),
+(24, 1, 'Điểm thi cuối kỳ', 50.00, 'Tự luận'),
+(25, 2, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(26, 2, 'Điểm bài tập', 20.00, 'Bài tập về nhà'),
+(27, 2, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm + Tự luận'),
+(28, 2, 'Điểm thi cuối kỳ', 50.00, 'Tự luận'),
+(29, 3, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(30, 3, 'Điểm bài tập', 15.00, 'Bài tập về nhà'),
+(31, 3, 'Điểm kiểm tra', 15.00, 'Trắc nghiệm'),
+(32, 3, 'Điểm đồ án', 20.00, 'Đồ án nhóm'),
+(33, 3, 'Điểm thi thực hành', 40.00, 'Thực hành cá nhân'),
+(34, 4, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(35, 4, 'Điểm thảo luận', 10.00, 'Thảo luận nhóm'),
+(36, 4, 'Điểm kiểm tra', 20.00, 'Trắc nghiệm'),
+(37, 4, 'Điểm đồ án', 30.00, 'Đồ án nhóm'),
+(38, 4, 'Điểm thi cuối kỳ', 30.00, 'Tự luận'),
+(44, 5, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(45, 5, 'Điểm chuyên cần', 10.00, 'Điểm danh'),
+(46, 5, 'Điểm thảo luận', 10.00, 'Thảo luận nhóm'),
+(47, 5, 'Điểm đồ án', 20.00, 'Đồ án nhóm'),
+(48, 5, 'Điểm thi cuối kỳ', 50.00, 'Tự luận');
 
 -- --------------------------------------------------------
 
@@ -81,11 +87,15 @@ CREATE TABLE `decuongchitiet` (
 --
 
 INSERT INTO `decuongchitiet` (`id`, `hoc_phan_id`, `muc_tieu`, `noi_dung`, `phuong_phap_giang_day`, `phuong_phap_danh_gia`, `tai_lieu_tham_khao`, `trang_thai`) VALUES
-(1, 1, 'Trang bị kiến thức cơ bản về triết học Mác-Lênin', 'Chương 1: Khái luận về Triết học và vai trò của Triết học\nChương 2: Chủ nghĩa duy vật biện chứng\nChương 3: Chủ nghĩa duy vật lịch sử', 'Thuyết giảng, thảo luận nhóm', 'Chuyên cần: 10%, Thảo luận: 20%, Kiểm tra giữa kỳ: 20%, Thi cuối kỳ: 50%', 'Giáo trình Triết học Mác-Lênin, NXB Chính trị Quốc gia, 2021', 1),
-(2, 9, 'Trang bị kiến thức cơ bản về lập trình và kỹ năng giải quyết vấn đề', 'Chương 1: Giới thiệu về lập trình\nChương 2: Biến và kiểu dữ liệu\nChương 3: Cấu trúc điều khiển\nChương 4: Hàm và module\nChương 5: Mảng và chuỗi', 'Thuyết giảng, thực hành trên máy tính, bài tập lớn', 'Chuyên cần: 10%, Bài tập: 20%, Kiểm tra giữa kỳ: 20%, Thi thực hành: 50%', 'Introduction to Programming with C++, Liang Y. Daniel, Pearson, 2019', 1),
-(3, 10, 'Trang bị kiến thức về lập trình hướng đối tượng và các nguyên tắc thiết kế', 'Chương 1: Tổng quan về lập trình hướng đối tượng\nChương 2: Lớp và đối tượng\nChương 3: Tính kế thừa\nChương 4: Tính đa hình\nChương 5: Mẫu thiết kế', 'Thuyết giảng, thực hành trên máy tính, bài tập lớn, đồ án môn học', 'Chuyên cần: 10%, Bài tập: 15%, Kiểm tra giữa kỳ: 15%, Đồ án: 20%, Thi thực hành: 40%', 'Object-Oriented Programming in Java, Barnes D.J., Kölling M., Pearson, 2020', 1),
-(4, 15, 'Trang bị kiến thức về quy trình phát triển phần mềm và kỹ năng làm việc nhóm', 'Chương 1: Giới thiệu về Công nghệ phần mềm\nChương 2: Quy trình phát triển phần mềm\nChương 3: Phân tích yêu cầu\nChương 4: Thiết kế phần mềm\nChương 5: Kiểm thử phần mềm\nChương 6: Bảo trì và tiến hóa phần mềm', 'Thuyết giảng, thảo luận nhóm, đồ án', 'Chuyên cần: 10%, Thảo luận: 10%, Kiểm tra: 20%, Đồ án: 30%, Thi cuối kỳ: 30%', 'Software Engineering, Ian Sommerville, Pearson, 2021', 1),
-(5, 25, 'Trang bị kiến thức và kỹ năng thực hiện đề tài tốt nghiệp', 'Sinh viên thực hiện một đề tài nghiên cứu hoặc phát triển sản phẩm dưới sự hướng dẫn của giảng viên', 'Hướng dẫn cá nhân, seminar, báo cáo tiến độ', 'Báo cáo tiến độ: 30%, Sản phẩm: 30%, Báo cáo tốt nghiệp: 40%', 'Tùy theo đề tài cụ thể', 1);
+(1, 1, 'Trang bị kiến thức cơ bản về triết học Mác-Lênin', 'Chương 1: Khái luận về Triết học và vai trò của Triết học\nChương 2: Chủ nghĩa duy vật biện chứng\nChương 3: Chủ nghĩa duy vật lịch sử', 'Thuyết giảng, thảo luận nhóm', '1,9,15,3,4', 'Giáo trình Triết học Mác-Lênin, NXB Chính trị Quốc gia, 2021', 1),
+(2, 9, 'Trang bị kiến thức cơ bản về lập trình và kỹ năng giải quyết vấn đề', 'Chương 1: Giới thiệu về lập trình\nChương 2: Biến và kiểu dữ liệu\nChương 3: Cấu trúc điều khiển\nChương 4: Hàm và module\nChương 5: Mảng và chuỗi', NULL, '5,6,7,24', NULL, 1),
+(3, 10, 'Trang bị kiến thức về lập trình hướng đối tượng và các nguyên tắc thiết kế', 'Chương 1: Tổng quan về lập trình hướng đối tượng\nChương 2: Lớp và đối tượng\nChương 3: Tính kế thừa\nChương 4: Tính đa hình\nChương 5: Mẫu thiết kế', 'Thuyết giảng, thực hành trên máy tính, bài tập lớn, đồ án môn học', '9,10,11,12,13', 'Object-Oriented Programming in Java, Barnes D.J., Kölling M., Pearson, 2020', 1),
+(4, 15, 'Trang bị kiến thức về quy trình phát triển phần mềm và kỹ năng làm việc nhóm', 'Chương 1: Giới thiệu về Công nghệ phần mềm\nChương 2: Quy trình phát triển phần mềm\nChương 3: Phân tích yêu cầu\nChương 4: Thiết kế phần mềm\nChương 5: Kiểm thử phần mềm\nChương 6: Bảo trì và tiến hóa phần mềm', 'Thuyết giảng, thảo luận nhóm, đồ án', '14,15,16,17,18', 'Software Engineering, Ian Sommerville, Pearson, 2021', 1),
+(5, 25, 'Trang bị kiến thức và kỹ năng thực hiện đề tài tốt nghiệp', 'Sinh viên thực hiện một đề tài nghiên cứu hoặc phát triển sản phẩm dưới sự hướng dẫn của giảng viên', 'Hướng dẫn cá nhân, seminar, báo cáo tiến độ', '39,40,41,42,43', 'Tùy theo đề tài cụ thể', 1),
+(6, 27, 'hẹ hẹ hẹ', 'aaaaaa', 'hẹ hẹ hẹ', 'hẹ hẹ hẹ', 'hẹ hẹ hẹ', 0),
+(7, 33, 'a', 'a', 's', 's', 's', 0),
+(8, 30, 'asdsad', 'asd', '1', '1,4,6,9,10', 's2', 1),
+(9, 28, 'a', 's', 'a', '1,2,6,4', 's', 1);
 
 -- --------------------------------------------------------
 
@@ -170,9 +180,14 @@ INSERT INTO `hocphan` (`id`, `ma_hp`, `ten_hp`, `so_tin_chi`, `so_tiet_ly_thuyet
 (24, 'CN010', 'Xử lý ngôn ngữ tự nhiên', 3, 30, 30, 3, 'Tự chọn', 'CN002', 0),
 (25, 'TN001', 'Thực tập tốt nghiệp', 5, 0, 150, 4, 'Bắt buộc', NULL, 0),
 (26, 'TN002', 'Khóa luận tốt nghiệp', 10, 0, 300, 4, 'Bắt buộc', NULL, 0),
-(27, 'TOIDAY', 'TOI TEST 123', 4, 30, 30, 2, 'Bắt buộc', 'CB001', 0),
-(28, 'TOIDAY2', 'TOI TEST 1234', 4, 30, 30, 2, 'Bắt buộc', 'TOIDAY1', NULL),
-(30, 'TOIDAY3', 'TOI TEST 123456', 2, 0, 30, 2, 'Bắt buộc', 'TOIDAY2', NULL);
+(27, 'TOIDAY', 'TOI TEST 1234', 4, 30, 30, 2, 'Bắt buộc', 'CB001', 0),
+(28, 'TOIDAY2', 'TOI TEST 1234', 4, 30, 30, 2, 'Bắt buộc', 'TOIDAY1', 0),
+(30, 'TOIDAY3', 'TOI TEST 123456', 2, 0, 30, 2, 'Bắt buộc', 'TOIDAY2', 0),
+(31, 'teetetet', 'test hoc phần', 4, 30, 15, 1, 'Bắt buộc', NULL, 0),
+(32, 'aaaaaaa', '1asdasd', 2, 2, 2, 6, 'Bắt buộc', NULL, 0),
+(33, 'hihi', 'he hẹ he', 8, 30, 10, 6, 'Bắt buộc', NULL, 0),
+(34, 'hheheheheh', 'asdasd', 10, 2, 60, 6, 'Bắt buộc', NULL, 0),
+(35, 'aaaaaaaa', 'bbbbbbbbbbbb', 10, 2, 60, 6, 'Bắt buộc', NULL, 0);
 
 -- --------------------------------------------------------
 
@@ -409,6 +424,7 @@ CREATE TABLE `role` (
 INSERT INTO `role` (`id`, `name`) VALUES
 (3, 'admin'),
 (1, 'giangvien'),
+(4, 'nguoidung'),
 (2, 'truongkhoa');
 
 -- --------------------------------------------------------
@@ -458,7 +474,8 @@ INSERT INTO `thongtinchung` (`id`, `ma_ctdt`, `ten_ctdt`, `nganh`, `ma_nganh`, `
 (5, 'DTVT2022', 'Chương trình đào tạo ngành Điện tử viễn thông', 'Điện tử viễn thông', '7520207', 'Khoa Điện tử - Viễn thông', 'Chính quy', 'Đại học', 150, '4 năm', 2022, 0),
 (6, 'KTPM2025', 'Kỹ thuật phần mềm', 'Công nghệ thông tin', '7480201', 'Khoa Công nghệ thông tin', 'Chính quy', 'Đại học', 180, '4.5 năm', 2024, 1),
 (7, 'CNPM2025', 'Công nghệ phần mềm', 'Công nghệ thông tin', '7480201', 'Khoa Công nghệ thông tin', 'Chính quy', 'Đại học', 180, '4.5 năm', 2024, 0),
-(8, 'CNPM2024', 'Công nghệ phần mềm', 'Công nghệ thông tin', '7480201', 'Khoa Công nghệ thông tin', 'Chính quy', 'Đại học', 180, '4.5 năm', 2024, 1);
+(8, 'CNPM2024', 'Công nghệ phần mềm', 'Công nghệ thông tin', '7480201', 'Khoa Công nghệ thông tin', 'Chính quy', 'Đại học', 180, '4.5 năm', 2024, 1),
+(9, 'tetetet', 'trtetetetetetet', 'hẹ hẹ', '123aas', 'assad', 'Vừa làm vừa học', 'Cao đẳng', 23, '3', 2002, 1);
 
 -- --------------------------------------------------------
 
@@ -494,7 +511,7 @@ CREATE TABLE `user` (
   `ho_ten` varchar(100) NOT NULL,
   `email` varchar(100) DEFAULT NULL,
   `so_dien_thoai` varchar(20) DEFAULT NULL,
-  `vai_tro` varchar(50) DEFAULT NULL,
+  `vai_tro` int(50) DEFAULT NULL,
   `nam_sinh` int(11) DEFAULT NULL,
   `trang_thai` bit(1) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
@@ -504,15 +521,18 @@ CREATE TABLE `user` (
 --
 
 INSERT INTO `user` (`id`, `username`, `password`, `ho_ten`, `email`, `so_dien_thoai`, `vai_tro`, `nam_sinh`, `trang_thai`) VALUES
-(1, 'admin', '$2y$10$FKlZJ6Ky0GPM/tAEFO.DwehOQHblUCfEbOM35ZED3kN32yVxUcmOe', 'Quản trị viên', 'admin@truong.edu.vn', '0901234567', 'admin', 1985, b'1'),
-(2, 'truongkhoa', '$2y$10$IiU5NAzEpBnZ1K7V3YlbVew5a3RKV1hEfYCJqXcLYU4DQB3TLW3hW', 'Nguyễn Văn Trưởng', 'truongkhoa@truong.edu.vn', '0912345678', 'truongkhoa', 1975, b'1'),
-(3, 'phuong', '$2y$10$0gLaiD6mxrx.yBBgF5yKZOAfl/IK6D1Kj0.oRiJK7n0ZwGpysVZxi', 'Trần Thị Phương', 'phuong@truong.edu.vn', '0923456789', 'giangvien', 1980, b'1'),
-(4, 'hung', '$2y$10$YeG6nF2FtV4y09KF96yTveyrNhU0Mb6aSvDsycHMZCHoG4s45HUFq', 'Lê Thanh Hùng', 'hung@truong.edu.vn', '0934567890', 'giangvien', 1982, b'1'),
-(5, 'minh', '$2y$10$1E/R23EwIfWf8QQyF3lqkeNYHj.YlbVJbCVP5N523XsIxkzZBBmHC', 'Phạm Tuấn Minh', 'minh@truong.edu.vn', '0945678901', 'giangvien', 1985, b'1'),
-(6, 'lan', '$2y$10$9UAfLvv/OO5K19RlVGJO0e2Rl43W1JSQio4BXdGJZyDfvYKbnlPom', 'Nguyễn Thị Lan', 'lan@truong.edu.vn', '0956789012', 'giangvien', 1987, b'1'),
-(7, 'binh', '$2y$10$w6BFRxeRefP9zZrmdQA3qedAI0FN9XgpRcvJLSOLmV0kHXUbDEROa', 'Trần Văn Bình', 'binh@truong.edu.vn', '0967890123', 'giangvien', 1979, b'1'),
-(8, 'linh', '$2y$10$uM/mfghPzDzT0ZoJ5DJVQuhl3rjXwQeE04zzar9Kru9mKdgIEQ8kW', 'Võ Thị Linh', 'linh@truong.edu.vn', '0978901234', 'giangvien', 1990, b'1'),
-(9, 'user123121242', '$2a$10$uoxVcg5Hn1EyY1IwDEc/su3ppHp5oAB7h6oCGNxY.YQE.HS9lPCny', 'Nguyễn Văn ACXC', 'user123@example.com', '0123456789', NULL, 2004, b'1');
+(1, 'admin', '$2y$10$FKlZJ6Ky0GPM/tAEFO.DwehOQHblUCfEbOM35ZED3kN32yVxUcmOe', 'Quản trị viên', 'admin@truong.edu.vn', '0901234567', 3, 1985, b'1'),
+(2, 'truongkhoa', '$2y$10$IiU5NAzEpBnZ1K7V3YlbVew5a3RKV1hEfYCJqXcLYU4DQB3TLW3hW', 'Nguyễn Văn Trưởng', 'truongkhoa@truong.edu.vn', '0912345678', 2, 1975, b'1'),
+(3, 'phuong', '$2y$10$0gLaiD6mxrx.yBBgF5yKZOAfl/IK6D1Kj0.oRiJK7n0ZwGpysVZxi', 'Trần Thị Phương', 'phuong@truong.edu.vn', '0923456789', 1, 1980, b'1'),
+(4, 'hung', '$2y$10$YeG6nF2FtV4y09KF96yTveyrNhU0Mb6aSvDsycHMZCHoG4s45HUFq', 'Lê Thanh Hùng', 'hung@truong.edu.vn', '0934567890', 1, 1982, b'1'),
+(5, 'minh', '$2y$10$1E/R23EwIfWf8QQyF3lqkeNYHj.YlbVJbCVP5N523XsIxkzZBBmHC', 'Phạm Tuấn Minh', 'minh@truong.edu.vn', '0945678901', 1, 1985, b'1'),
+(6, 'lan', '$2y$10$9UAfLvv/OO5K19RlVGJO0e2Rl43W1JSQio4BXdGJZyDfvYKbnlPom', 'Nguyễn Thị Lan', 'lan@truong.edu.vn', '0956789012', 1, 1987, b'1'),
+(7, 'binh', '$2y$10$w6BFRxeRefP9zZrmdQA3qedAI0FN9XgpRcvJLSOLmV0kHXUbDEROa', 'Trần Văn Bình', 'binh@truong.edu.vn', '0967890123', 1, 1979, b'1'),
+(8, 'linh', '$2y$10$uM/mfghPzDzT0ZoJ5DJVQuhl3rjXwQeE04zzar9Kru9mKdgIEQ8kW', 'Võ Thị Linh', 'linh@truong.edu.vn', '0978901234', 1, 1990, b'1'),
+(9, 'user123121242', '$2a$10$uoxVcg5Hn1EyY1IwDEc/su3ppHp5oAB7h6oCGNxY.YQE.HS9lPCny', 'Nguyễn Văn ACXC', 'user123@example.com', '0123456789', 4, 2004, b'0'),
+(10, 'toiday', '$2a$10$yBj7gvK8otROZlkd/esNMubkEKyV.NZCX6GIpOIg9EaNgZPKAjrQe', 'tester', 'test@gmail.com', '012345678', 4, 2004, b'1'),
+(11, 'aaa', '$2a$10$HaNhrR268lD8AL8ZKUa9q.SD4hYeaaVWRzja98gQdkosCQFjmOoae', 'asd', 'tes@gmail.com', '01234556789', 4, 2004, b'1'),
+(12, 'aba', '$2a$10$uzg6EXaLV67efANZ2LGzCOBf7LOteyHWChAWW0q0cG4NVKOBSjuC.', 'asd', 'tes2@gmail.com', '01234556789', 4, 2004, b'1');
 
 -- --------------------------------------------------------
 
@@ -530,7 +550,12 @@ CREATE TABLE `user_roles` (
 --
 
 INSERT INTO `user_roles` (`user_id`, `role_id`) VALUES
-(9, 1);
+(9, 1),
+(11, 1),
+(12, 4),
+(2, 2),
+(3, 1),
+(1, 3);
 
 --
 -- Indexes for dumped tables
@@ -666,13 +691,13 @@ ALTER TABLE `user_roles`
 -- AUTO_INCREMENT for table `cotdiem`
 --
 ALTER TABLE `cotdiem`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=49;
 
 --
 -- AUTO_INCREMENT for table `decuongchitiet`
 --
 ALTER TABLE `decuongchitiet`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=6;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `giangvien`
@@ -684,7 +709,7 @@ ALTER TABLE `giangvien`
 -- AUTO_INCREMENT for table `hocphan`
 --
 ALTER TABLE `hocphan`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=36;
 
 --
 -- AUTO_INCREMENT for table `kehoachdayhoc`
@@ -732,7 +757,7 @@ ALTER TABLE `phanconggiangday`
 -- AUTO_INCREMENT for table `role`
 --
 ALTER TABLE `role`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `score`
@@ -744,7 +769,7 @@ ALTER TABLE `score`
 -- AUTO_INCREMENT for table `thongtinchung`
 --
 ALTER TABLE `thongtinchung`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=9;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
 
 --
 -- AUTO_INCREMENT for table `thong_tin_chung`
@@ -756,7 +781,7 @@ ALTER TABLE `thong_tin_chung`
 -- AUTO_INCREMENT for table `user`
 --
 ALTER TABLE `user`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables

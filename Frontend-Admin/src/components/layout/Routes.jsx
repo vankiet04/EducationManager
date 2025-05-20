@@ -1,8 +1,5 @@
 // General
 import NotFound from "../../pages/error/NotFound";
-import Dashboard from "../../pages/dashboard/Overview";
-
-// Customer
 import ManageCustomer from "../../pages/customers/ManageCustomer";
 
 // Lecturers (Giảng viên)
@@ -41,7 +38,7 @@ import ManageTeachingPlan from "../../pages/teaching-plan/ManageTeachingPlan";
 const routes = [
   {
     path: "/",
-    element: <Dashboard />,
+    element: <ManageCustomer />,
   },
   // User Management (Quản lý người dùng)
   {
@@ -103,7 +100,6 @@ const routes = [
     path: "/teaching-plan/manage",
     element: <ManageTeachingPlan />,
   },
-  // Add routes for education management
   // Error pages
   {
     path: "*",

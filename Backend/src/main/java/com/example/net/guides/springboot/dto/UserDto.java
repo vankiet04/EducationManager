@@ -1,5 +1,8 @@
 package com.example.net.guides.springboot.dto;
 
+import java.util.HashSet;
+import java.util.Set;
+
 public class UserDto {
 
     private String username;
@@ -17,6 +20,8 @@ public class UserDto {
     private Integer namSinh;
     
     private Boolean trangThai;
+    
+    private Set<Long> roleIds = new HashSet<>();
 
     public String getUsername() {
         return username;
@@ -80,5 +85,13 @@ public class UserDto {
     
     public void setTrangThai(Boolean trangThai) {
         this.trangThai = trangThai;
+    }
+    
+    public Set<Long> getRoleIds() {
+        return roleIds;
+    }
+    
+    public void setRoleIds(Set<Long> roleIds) {
+        this.roleIds = roleIds;
     }
 }
