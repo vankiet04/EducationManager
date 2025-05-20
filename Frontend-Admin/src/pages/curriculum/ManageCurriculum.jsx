@@ -47,7 +47,7 @@ const ManageCurriculum = () => {
     setLoading(true);
     try {
       // Fetch thongtinchung data
-      const thongtinchungResponse = await axios.get('/thongTinChung');
+      const thongtinchungResponse = await axios.get('/api/thongTinChung');
       setCurriculums(thongtinchungResponse.data);
     } catch (error) {
       console.error('Error fetching data:', error);
@@ -66,13 +66,13 @@ const ManageCurriculum = () => {
     try {
       if (values.id) {
         // Update existing curriculum group
-        await axios.put(`/khungchuongtrinh-nhomkienthuc/${values.id}`, values);
+        await axios.put(`/api/chitietkhungchuongtrinh/${values.id}`, values);
         Modal.success({
           content: 'Cập nhật nhóm kiến thức thành công'
         });
       } else {
         // Create new curriculum group
-        await axios.post('/khungchuongtrinh-nhomkienthuc', values);
+        await axios.post('/api/chitietkhungchuongtrinh', values);
         Modal.success({
           content: 'Thêm nhóm kiến thức mới thành công'
         });
@@ -97,19 +97,19 @@ const ManageCurriculum = () => {
     setDetailsLoading(true);
     try {
       // Get curriculum details from khungchuongtrinh
-      const curriculumResponse = await axios.get(`/khungchuongtrinh/${record.id}`);
+      const curriculumResponse = await axios.get(`/api/khungchuongtrinh/${record.id}`);
       const curriculum = curriculumResponse.data[0]; // Get first item from the list
 
       // Get knowledge groups for this curriculum
-      const knowledgeGroupsResponse = await axios.get(`/khungchuongtrinh-nhomkienthuc/khungchuongtrinh/${curriculum.id}`);
+      const knowledgeGroupsResponse = await axios.get(`/api/chitietkhungchuongtrinh/${curriculum.id}`);
       const knowledgeGroups = knowledgeGroupsResponse.data;
 
       // Get all knowledge groups details
-      const nhomKienThucResponse = await axios.get('/nhomkienthuc');
+      const nhomKienThucResponse = await axios.get('/api/nhomkienthuc');
       const nhomKienThucList = nhomKienThucResponse.data;
 
       // Get all courses
-      const coursesResponse = await axios.get('/hocphan');
+      const coursesResponse = await axios.get('/api/hocphan');
       const courses = coursesResponse.data;
 
       // Build hierarchical data
@@ -117,8 +117,8 @@ const ManageCurriculum = () => {
         curriculum: curriculum,
         generalInfo: record,
         groups: await Promise.all(knowledgeGroups.map(async (group) => {
-          const nhomKienThuc = nhomKienThucList.find(n => n.id === group.idMaNhom);
-          const groupCourses = courses.filter(course => course.nhomKienThucID === group.idMaNhom);
+          const nhomKienThuc = nhomKienThucList.find(n => n.id === group.idNhomKienThuc);
+          const groupCourses = courses.filter(course => course.nhomKienThucID === group.idNhomKienThuc);
           
           return {
             ...group,

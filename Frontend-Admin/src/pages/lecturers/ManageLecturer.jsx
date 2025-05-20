@@ -49,11 +49,11 @@ const ManageLecturer = () => {
     setLoading(true);
     try {
       // Fetch lecturers from API
-      const lecturersResponse = await axios.get('/giangvien');
+      const lecturersResponse = await axios.get('/api/giangvien');
       const lecturersData = lecturersResponse.data.filter(lecturer => lecturer.trangThai === 1); // Only get active lecturers
       
       // Fetch users from API
-      const usersResponse = await axios.get('/user');
+      const usersResponse = await axios.get('/api/user');
       const usersData = usersResponse.data;
       
       // Combine lecturer data with user data
@@ -88,7 +88,7 @@ const ManageLecturer = () => {
   const handleEdit = async (record) => {
     try {
       setLoading(true);
-      const response = await axios.get(`/giangvien/${record.id}`);
+      const response = await axios.get(`/api/giangvien/${record.id}`);
       const lecturerData = response.data;
       
       setEditingId(record.id);
@@ -123,7 +123,7 @@ const ManageLecturer = () => {
           setLoading(true);
           const lecturer = lecturers.find(l => l.id === lecturerId);
           const updatedLecturer = { ...lecturer, trangThai: 0 };
-          await axios.put(`/giangvien/${lecturerId}`, updatedLecturer);
+          await axios.put(`/api/giangvien/${lecturerId}`, updatedLecturer);
           message.success('Xoá hóa giảng viên thành công');
           fetchLecturers();
         } catch (error) {
@@ -140,7 +140,7 @@ const ManageLecturer = () => {
   const handleAssignUser = async (lecturerId, userId) => {
     try {
       setLoading(true);
-      await axios.post(`/giangvien/${lecturerId}/assign-user/${userId}`);
+      await axios.post(`/api/giangvien/${lecturerId}/assign-user/${userId}`);
       message.success('Gán tài khoản cho giảng viên thành công');
       fetchLecturers(); // Refresh the list
     } catch (error) {
@@ -170,11 +170,11 @@ const ManageLecturer = () => {
       
       if (editingId) {
         // Update existing lecturer
-        await axios.put(`/giangvien/${editingId}`, lecturerData);
+        await axios.put(`/api/giangvien/${editingId}`, lecturerData);
         message.success('Cập nhật giảng viên thành công');
       } else {
         // Create new lecturer
-        await axios.post('/giangvien', lecturerData);
+        await axios.post('/api/giangvien', lecturerData);
         message.success('Thêm giảng viên mới thành công');
       }
       

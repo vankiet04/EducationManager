@@ -12,7 +12,7 @@ const { TabPane } = Tabs;
 const { TextArea } = Input;
 
 // API base URL
-const API_URL = 'http://localhost:8080/api';
+const API_URL = 'http://localhost:8080';
 
 // Thiết lập cấu hình global cho axios
 axios.defaults.baseURL = API_URL;
@@ -62,7 +62,7 @@ const ManageSyllabuses = () => {
       
       try {
         // Gọi API lấy dữ liệu học phần
-        const coursesResponse = await axios.get(`/hocphan`);
+        const coursesResponse = await axios.get(`/api/hocphan`);
         console.log('API Response:', coursesResponse);
         coursesData = coursesResponse.data;
         // Map backend field names to frontend expected names
@@ -81,7 +81,7 @@ const ManageSyllabuses = () => {
       
       try {
         // Gọi API lấy dữ liệu đề cương
-        const syllabusesResponse = await axios.get(`/decuongchitiet`);
+        const syllabusesResponse = await axios.get(`/api/decuongchitiet`);
         console.log('Syllabuses API Response:', syllabusesResponse);
         syllabusesData = syllabusesResponse.data;
         // Map data format from API to component expected format - match database field names
@@ -106,7 +106,7 @@ const ManageSyllabuses = () => {
       
       try {
         // Gọi API lấy dữ liệu cột điểm
-        const gradeColumnsResponse = await axios.get(`/cotdiem`);
+        const gradeColumnsResponse = await axios.get(`/api/cotdiem`);
         console.log('Grade Columns API Response:', gradeColumnsResponse);
         gradeColumnsData = gradeColumnsResponse.data;
         // Map API field names (snake_case) to component expected names (camelCase)
@@ -156,7 +156,7 @@ const ManageSyllabuses = () => {
     
     try {
       // Lấy danh sách cột điểm của đề cương
-      const gradeColumnsResponse = await axios.get(`${API_URL}/cotdiem/decuong/${record.id}`);
+      const gradeColumnsResponse = await axios.get(`${API_URL}/api/cotdiem/decuong/${record.id}`);
       const syllabusCotDiem = gradeColumnsResponse.data;
       
       setSelectedGradeColumns(syllabusCotDiem);
@@ -204,12 +204,12 @@ const ManageSyllabuses = () => {
         setLoading(true);
         try {
           // Delete the syllabus
-          await axios.delete(`${API_URL}/decuongchitiet/${id}`);
+          await axios.delete(`${API_URL}/api/decuongchitiet/${id}`);
           
           // Also delete all related grade columns
-          const gradeColumnsData = await axios.get(`${API_URL}/cotdiem/decuong/${id}`);
+          const gradeColumnsData = await axios.get(`${API_URL}/api/cotdiem/decuong/${id}`);
           for (const column of gradeColumnsData.data) {
-            await axios.delete(`${API_URL}/cotdiem/${column.id}`);
+            await axios.delete(`${API_URL}/api/cotdiem/${column.id}`);
           }
           
           // Update the local state
@@ -245,7 +245,7 @@ const ManageSyllabuses = () => {
           if (syllabus) {
             // Update the status to approved (1)
             const updatedSyllabus = { ...syllabus, trangThai: 1 };
-            await axios.put(`${API_URL}/decuongchitiet/${id}`, updatedSyllabus);
+            await axios.put(`${API_URL}/api/decuongchitiet/${id}`, updatedSyllabus);
             
             // Update the local state
             const updatedSyllabuses = syllabuses.map(s => {
@@ -295,13 +295,13 @@ const ManageSyllabuses = () => {
       let response;
       if (editingRecord) {
         // Update existing syllabus
-        response = await axios.put(`${API_URL}/decuongchitiet/${editingRecord}`, syllabusData);
+        response = await axios.put(`${API_URL}/api/decuongchitiet/${editingRecord}`, syllabusData);
         
         // Update cột điểm for existing syllabus
         // First, delete all existing cotdiem for this syllabus
-        const existingGradeColumns = await axios.get(`${API_URL}/cotdiem/decuong/${editingRecord}`);
+        const existingGradeColumns = await axios.get(`${API_URL}/api/cotdiem/decuong/${editingRecord}`);
         for (const column of existingGradeColumns.data) {
-          await axios.delete(`${API_URL}/cotdiem/${column.id}`);
+          await axios.delete(`${API_URL}/api/cotdiem/${column.id}`);
         }
         
         // Then create new ones
@@ -312,7 +312,7 @@ const ManageSyllabuses = () => {
             tyLePhanTram: column.tyLePhanTram,
             hinhThuc: column.hinhThuc
           };
-          await axios.post(`${API_URL}/cotdiem`, gradeColumnData);
+          await axios.post(`${API_URL}/api/cotdiem`, gradeColumnData);
         }
         
         message.success('Cập nhật đề cương thành công, đang chờ phê duyệt');
@@ -328,7 +328,7 @@ const ManageSyllabuses = () => {
         setSyllabuses(updatedSyllabuses);
       } else {
         // Create new syllabus without grade columns
-        response = await axios.post(`${API_URL}/decuongchitiet`, syllabusData);
+        response = await axios.post(`${API_URL}/api/decuongchitiet`, syllabusData);
         const newSyllabus = response.data;
         
         message.success('Thêm đề cương mới thành công, đang chờ phê duyệt');
@@ -508,7 +508,7 @@ const ManageSyllabuses = () => {
   const showGradeColumnsDetails = async (syllabusId) => {
     try {
       // Get grade columns for this syllabus
-      const gradeColumnsResponse = await axios.get(`${API_URL}/cotdiem/decuong/${syllabusId}`);
+      const gradeColumnsResponse = await axios.get(`${API_URL}/api/cotdiem/decuong/${syllabusId}`);
       const syllabusGradeColumns = gradeColumnsResponse.data.map(column => ({
         id: column.id,
         decuongId: column.decuongId || column.decuong_id,
@@ -530,13 +530,13 @@ const ManageSyllabuses = () => {
   const handleViewDetails = async (record) => {
     try {
       // Get syllabus details
-      const syllabusResponse = await axios.get(`${API_URL}/decuongchitiet/${record.id}`);
+      const syllabusResponse = await axios.get(`${API_URL}/api/decuongchitiet/${record.id}`);
       const syllabusData = syllabusResponse.data;
       
       // Get the course details
       let courseData;
       try {
-        const courseResponse = await axios.get(`${API_URL}/hocphan/${syllabusData.hocPhanId || syllabusData.hoc_phan_id}`);
+        const courseResponse = await axios.get(`${API_URL}/api/hocphan/${syllabusData.hocPhanId || syllabusData.hoc_phan_id}`);
         courseData = courseResponse.data;
       } catch (error) {
         console.error('Error fetching course details:', error);
@@ -565,9 +565,9 @@ const ManageSyllabuses = () => {
   const handleGradeColumnsSubmit = async (syllabusId, gradeColumns) => {
     try {
       // First, delete all existing grade columns for this syllabus
-      const existingColumns = await axios.get(`${API_URL}/cotdiem/decuong/${syllabusId}`);
+      const existingColumns = await axios.get(`${API_URL}/api/cotdiem/decuong/${syllabusId}`);
       for (const column of existingColumns.data) {
-        await axios.delete(`${API_URL}/cotdiem/${column.id}`);
+        await axios.delete(`${API_URL}/api/cotdiem/${column.id}`);
       }
       
       // Then add new grade columns
@@ -578,7 +578,7 @@ const ManageSyllabuses = () => {
           tyLePhanTram: column.tyLePhanTram,
           hinhThuc: column.hinhThuc
         };
-        await axios.post(`${API_URL}/cotdiem`, columnData);
+        await axios.post(`${API_URL}/api/cotdiem`, columnData);
       }
       
       // Refresh data
