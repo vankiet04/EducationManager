@@ -34,6 +34,7 @@ public class HocPhanService {
         dto.setNhomKienThucID(hocPhan.getNhomKienThucID().getId());
         dto.setLoaiHp(hocPhan.getLoaiHp());
         dto.setHocPhanTienQuyet(hocPhan.getHocPhanTienQuyet());
+        dto.setTrangThai(hocPhan.getTrangThai());
         return dto;
     }
 
@@ -48,6 +49,7 @@ public class HocPhanService {
         hocPhan.setNhomKienThucID(nhomKienThucRepo.findById(dto.getNhomKienThucID()).get());
         hocPhan.setLoaiHp(dto.getLoaiHp());
         hocPhan.setHocPhanTienQuyet(dto.getHocPhanTienQuyet());
+        hocPhan.setTrangThai(dto.getTrangThai());
         return hocPhan;
     }
     
@@ -70,6 +72,7 @@ public class HocPhanService {
 
     public HocPhanDTO create(HocPhanDTO dto) {
         HocPhan hocPhan = ChuyenDoiEntity(dto);
+        hocPhan.setTrangThai(0);
         hocPhanRepo.save(hocPhan);
         return ChuyenDoiDTO(hocPhan);
     }

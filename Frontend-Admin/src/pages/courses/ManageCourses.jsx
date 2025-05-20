@@ -105,7 +105,8 @@ const ManageCourses = () => {
         soTietThucHanh: values.soTietThucHanh,
         nhomKienThucID: values.nhomKienThucID,
         loaiHp: values.loaiHp,
-        hocPhanTienQuyet: values.hocPhanTienQuyet
+        hocPhanTienQuyet: values.hocPhanTienQuyet,
+        trangThai: 0 // Explicitly set status to 0 for new courses
       };
       
       if (editingId) {

@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Upload, 
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, 
   Tag, Tooltip, Tabs, Divider, message, Row, Col, Checkbox } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  ReloadOutlined, InfoCircleOutlined, UploadOutlined, FileTextOutlined,
+  ReloadOutlined, InfoCircleOutlined, FileTextOutlined,
   CheckCircleOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
@@ -44,10 +44,10 @@ const ManageSyllabuses = () => {
   const [detailsModalVisible, setDetailsModalVisible] = useState(false);
   const [selectedGradeColumns, setSelectedGradeColumns] = useState([]);
   const [currentTab, setCurrentTab] = useState('1');
-  const [fileList, setFileList] = useState([]);
   const [totalPercentage, setTotalPercentage] = useState(0);
   const [form] = Form.useForm();
   const [pagination, setPagination] = useState({ current: 1 });
+  const [isViewMode, setIsViewMode] = useState(false);
   
   // Load data when component mounts
   useEffect(() => {
@@ -117,6 +117,9 @@ const ManageSyllabuses = () => {
           tyLePhanTram: column.tyLePhanTram || column.ty_le_phan_tram,
           hinhThuc: column.hinhThuc || column.hinh_thuc
         }));
+        
+        // Sort grade columns by percentage in ascending order
+        gradeColumnsData.sort((a, b) => parseFloat(a.tyLePhanTram) - parseFloat(b.tyLePhanTram));
       } catch (error) {
         console.error('Error fetching grade columns:', error);
         message.error('Không thể tải dữ liệu cột điểm. Vui lòng thử lại sau.');
@@ -168,13 +171,14 @@ const ManageSyllabuses = () => {
         mucTieu: record.mucTieu,
         noiDung: record.noiDung,
         phuongPhapGiangDay: record.phuongPhapGiangDay,
-        phuongPhapDanhGia: record.phuongPhapDanhGia,
+        // We don't set phuongPhapDanhGia from record since it now stores column IDs
         taiLieuThamKhao: record.taiLieuThamKhao,
         trangThai: record.trangThai,
         cotDiem: syllabusCotDiem.map(item => item.id)
       });
       
       setDetailsModalVisible(true);
+      setIsViewMode(false);
     } catch (error) {
       console.error('Error fetching grade columns:', error);
       message.error('Không thể tải dữ liệu cột điểm. Vui lòng thử lại sau.');
@@ -190,9 +194,18 @@ const ManageSyllabuses = () => {
 
   // Xử lý chọn cột điểm
   const handleGradeColumnChange = (checkedValues) => {
+    // Check if the sum of selected columns would exceed 100%
     const selectedColumns = gradeColumns.filter(column => checkedValues.includes(column.id));
+    const total = calculateTotalPercentage(selectedColumns);
+    
+    if (total > 100) {
+      message.warning('Tổng tỷ lệ phần trăm các cột điểm không được vượt quá 100%');
+      // Don't update if total exceeds 100%
+      return;
+    }
+    
     setSelectedGradeColumns(selectedColumns);
-    setTotalPercentage(calculateTotalPercentage(selectedColumns));
+    setTotalPercentage(total);
   };
 
   // Handle delete syllabus
@@ -282,37 +295,60 @@ const ManageSyllabuses = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
+      // Convert selected grade column IDs to a string and store in phuongPhapDanhGia
+      const selectedColumnIds = selectedGradeColumns.map(col => col.id).join(',');
+      
       const syllabusData = {
         hocPhanId: values.hocPhanId,
         mucTieu: values.mucTieu,
         noiDung: values.noiDung,
         phuongPhapGiangDay: values.phuongPhapGiangDay,
-        phuongPhapDanhGia: values.phuongPhapDanhGia,
+        phuongPhapDanhGia: selectedColumnIds, // Store grade column IDs here
         taiLieuThamKhao: values.taiLieuThamKhao,
         trangThai: 0 // Set initial status to 0 (pending)
       };
 
       let response;
       if (editingRecord) {
-        // Update existing syllabus
-        response = await axios.put(`${API_URL}/api/decuongchitiet/${editingRecord}`, syllabusData);
-        
-        // Update cột điểm for existing syllabus
-        // First, delete all existing cotdiem for this syllabus
-        const existingGradeColumns = await axios.get(`${API_URL}/api/cotdiem/decuong/${editingRecord}`);
-        for (const column of existingGradeColumns.data) {
-          await axios.delete(`${API_URL}/api/cotdiem/${column.id}`);
-        }
-        
-        // Then create new ones
-        for (const column of selectedGradeColumns) {
-          const gradeColumnData = {
+        try {
+          // Check if total percentage is 100% before saving
+          const total = calculateTotalPercentage(selectedGradeColumns);
+          if (total !== 100) {
+            message.error('Tổng tỷ lệ phần trăm các cột điểm phải đúng 100%');
+            setLoading(false);
+            return;
+          }
+          
+          // Update existing syllabus
+          response = await axios.put(`${API_URL}/api/decuongchitiet/${editingRecord}`, syllabusData);
+          
+          // Update cột điểm for existing syllabus
+          // First, delete all existing cotdiem for this syllabus
+          const existingGradeColumns = await axios.get(`${API_URL}/api/cotdiem/decuong/${editingRecord}`);
+          for (const column of existingGradeColumns.data) {
+            await axios.delete(`${API_URL}/api/cotdiem/${column.id}`);
+          }
+          
+          // Process selected grade columns to ensure proper formatting
+          const formattedGradeColumns = selectedGradeColumns.map(column => ({
             decuongId: editingRecord,
-            tenCotDiem: column.tenCotDiem,
-            tyLePhanTram: column.tyLePhanTram,
-            hinhThuc: column.hinhThuc
-          };
-          await axios.post(`${API_URL}/api/cotdiem`, gradeColumnData);
+            tenCotDiem: column.tenCotDiem || "",
+            tyLePhanTram: parseFloat(column.tyLePhanTram) || 0,
+            hinhThuc: column.hinhThuc || ""
+          }));
+          
+          // Then create new ones - one by one with error handling
+          for (const column of formattedGradeColumns) {
+            try {
+              await axios.post(`${API_URL}/api/cotdiem`, column);
+            } catch (columnError) {
+              console.error('Error adding grade column:', columnError);
+              // Continue with the next column even if this one fails
+            }
+          }
+        } catch (updateError) {
+          console.error('Error updating syllabus or grade columns:', updateError);
+          throw updateError;
         }
         
         message.success('Cập nhật đề cương thành công, đang chờ phê duyệt');
@@ -327,19 +363,52 @@ const ManageSyllabuses = () => {
         
         setSyllabuses(updatedSyllabuses);
       } else {
-        // Create new syllabus without grade columns
-        response = await axios.post(`${API_URL}/api/decuongchitiet`, syllabusData);
-        const newSyllabus = response.data;
-        
-        message.success('Thêm đề cương mới thành công, đang chờ phê duyệt');
-        
-        // Update in local state
-        setSyllabuses([...syllabuses, newSyllabus]);
+        try {
+          // Check if total percentage is 100% before saving
+          const total = calculateTotalPercentage(selectedGradeColumns);
+          if (total !== 100) {
+            message.error('Tổng tỷ lệ phần trăm các cột điểm phải đúng 100%');
+            setLoading(false);
+            return;
+          }
+          
+          // Create new syllabus first
+          response = await axios.post(`${API_URL}/api/decuongchitiet`, syllabusData);
+          const newSyllabus = response.data;
+          
+          // Then add grade columns for the new syllabus
+          if (selectedGradeColumns.length > 0) {
+            // Process selected grade columns to ensure proper formatting
+            const formattedGradeColumns = selectedGradeColumns.map(column => ({
+              decuongId: newSyllabus.id,
+              tenCotDiem: column.tenCotDiem || "",
+              tyLePhanTram: parseFloat(column.tyLePhanTram) || 0,
+              hinhThuc: column.hinhThuc || ""
+            }));
+            
+            // Add grade columns one by one with error handling
+            for (const column of formattedGradeColumns) {
+              try {
+                await axios.post(`${API_URL}/api/cotdiem`, column);
+              } catch (columnError) {
+                console.error('Error adding grade column:', columnError);
+                // Continue with the next column even if this one fails
+              }
+            }
+          }
+          
+          message.success('Thêm đề cương mới thành công, đang chờ phê duyệt');
+          
+          // Update in local state
+          setSyllabuses([...syllabuses, newSyllabus]);
+        } catch (createError) {
+          console.error('Error creating syllabus or grade columns:', createError);
+          throw createError;
+        }
       }
       
       setDetailsModalVisible(false);
       form.resetFields();
-      setFileList([]);
       setSelectedGradeColumns([]);
       setTotalPercentage(0);
     } catch (error) {
@@ -467,7 +536,7 @@ const ManageSyllabuses = () => {
             <Button 
               icon={<InfoCircleOutlined />} 
               size="small"
-              onClick={() => handleEdit(record)}
+              onClick={() => handleViewDetails(record)}
             >
               Xem chi tiết
             </Button>
@@ -517,27 +586,46 @@ const ManageSyllabuses = () => {
         hinhThuc: column.hinhThuc || column.hinh_thuc
       }));
       
+      // Sort by percentage in ascending order
+      syllabusGradeColumns.sort((a, b) => parseFloat(a.tyLePhanTram) - parseFloat(b.tyLePhanTram));
+      
       // Cập nhật state để hiển thị
       setSelectedGradeColumns(syllabusGradeColumns);
       
+      // Calculate and update total percentage
+      const total = calculateTotalPercentage(syllabusGradeColumns);
+      setTotalPercentage(total);
+      
+      return syllabusGradeColumns;
     } catch (error) {
       console.error('Error fetching grade columns for syllabus:', error);
       message.error('Không thể tải dữ liệu cột điểm. Vui lòng thử lại sau.');
+      return [];
     }
   };
 
   // Handle viewing details of syllabus
   const handleViewDetails = async (record) => {
     try {
+      // Set view mode to true
+      setIsViewMode(true);
+      setEditingRecord(record.id);
+      setLoading(true);
+      
       // Get syllabus details
       const syllabusResponse = await axios.get(`${API_URL}/api/decuongchitiet/${record.id}`);
       const syllabusData = syllabusResponse.data;
       
       // Get the course details
-      let courseData;
       try {
         const courseResponse = await axios.get(`${API_URL}/api/hocphan/${syllabusData.hocPhanId || syllabusData.hoc_phan_id}`);
-        courseData = courseResponse.data;
+        const courseData = courseResponse.data;
+        
+        // Enrich syllabusData with course info if needed
+        if (!syllabusData.tenHocPhan && courseData) {
+          syllabusData.tenHocPhan = courseData.tenHp;
+          syllabusData.maHocPhan = courseData.maHp;
+        }
       } catch (error) {
         console.error('Error fetching course details:', error);
       }
@@ -545,19 +633,23 @@ const ManageSyllabuses = () => {
       // Get grade columns for this syllabus
       await showGradeColumnsDetails(record.id);
       
-      // Set modal data
-      const detailsData = {
-        ...syllabusData,
-        courseData
-      };
+      // Set form values based on the record
+      form.setFieldsValue({
+        hocPhanId: syllabusData.hocPhanId,
+        mucTieu: syllabusData.mucTieu,
+        noiDung: syllabusData.noiDung,
+        phuongPhapGiangDay: syllabusData.phuongPhapGiangDay,
+        taiLieuThamKhao: syllabusData.taiLieuThamKhao,
+        cotDiem: selectedGradeColumns.map(item => item.id)
+      });
       
       // Open modal
       setDetailsModalVisible(true);
-      
-      return detailsData;
+      setLoading(false);
     } catch (error) {
       console.error('Error fetching details:', error);
       message.error('Không thể tải chi tiết đề cương. Vui lòng thử lại sau.');
+      setLoading(false);
     }
   };
   
@@ -636,7 +728,6 @@ const ManageSyllabuses = () => {
             onClick={() => {
               setEditingRecord(null);
               form.resetFields();
-              setFileList([]);
               setDetailsModalVisible(true);
             }}
           >
@@ -683,32 +774,46 @@ const ManageSyllabuses = () => {
       `}</style>
 
       <Modal
-        title={editingRecord ? "Chi tiết đề cương" : "Thêm đề cương chi tiết mới"}
+        title={isViewMode ? "Chi tiết đề cương (Chỉ xem)" : (editingRecord ? "Sửa đề cương" : "Thêm đề cương chi tiết mới")}
         open={detailsModalVisible}
         onCancel={() => {
           setDetailsModalVisible(false);
           form.resetFields();
-          setFileList([]);
+          setIsViewMode(false);
         }}
-        footer={editingRecord ? null : (
+        footer={(
           <Space>
-            <Button
-              onClick={() => {
-                setDetailsModalVisible(false);
-                form.resetFields();
-                setFileList([]);
-              }}
-            >
-              Hủy
-            </Button>
-            <Button 
-              type="primary" 
-              onClick={form.submit}
-              loading={loading}
-              icon={<FileTextOutlined />}
-            >
-              Thêm đề cương
-            </Button>
+            {isViewMode ? (
+              <Button
+                onClick={() => {
+                  setDetailsModalVisible(false);
+                  form.resetFields();
+                  setIsViewMode(false);
+                }}
+              >
+                Đóng
+              </Button>
+            ) : (
+              <>
+                <Button
+                  onClick={() => {
+                    setDetailsModalVisible(false);
+                    form.resetFields();
+                    setIsViewMode(false);
+                  }}
+                >
+                  Hủy
+                </Button>
+                <Button 
+                  type="primary" 
+                  onClick={form.submit}
+                  loading={loading}
+                  icon={<FileTextOutlined />}
+                >
+                  {editingRecord ? "Lưu thay đổi" : "Thêm đề cương"}
+                </Button>
+              </>
+            )}
           </Space>
         )}
         width={800}
@@ -717,6 +822,7 @@ const ManageSyllabuses = () => {
           form={form}
           layout="vertical"
           onFinish={handleSubmit}
+          disabled={isViewMode}
         >
           <Tabs activeKey={currentTab} onChange={handleTabChange}>
             <TabPane tab="Thông tin cơ bản" key="1">
@@ -729,7 +835,6 @@ const ManageSyllabuses = () => {
                   placeholder="Chọn học phần"
                   showSearch
                   optionFilterProp="children"
-                  disabled={!!editingRecord}
                 >
                   {courses.map(course => (
                     <Option key={course.id} value={course.id}>
@@ -744,7 +849,7 @@ const ManageSyllabuses = () => {
                 label="Mục tiêu học phần"
                 rules={[{ required: true, message: 'Vui lòng nhập mục tiêu học phần!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập mục tiêu của học phần" disabled={!!editingRecord} />
+                <TextArea rows={3} placeholder="Nhập mục tiêu của học phần" />
               </Form.Item>
 
               <Form.Item
@@ -752,25 +857,17 @@ const ManageSyllabuses = () => {
                 label="Nội dung"
                 rules={[{ required: true, message: 'Vui lòng nhập nội dung học phần!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập nội dung chi tiết của học phần" disabled={!!editingRecord} />
+                <TextArea rows={3} placeholder="Nhập nội dung chi tiết của học phần" />
               </Form.Item>
             </TabPane>
 
-            <TabPane tab="Phương pháp & Đánh giá" key="2">
+            <TabPane tab="Phương pháp giảng dạy & Tài liệu" key="2">
               <Form.Item
                 name="phuongPhapGiangDay"
                 label="Phương pháp giảng dạy"
                 rules={[{ required: true, message: 'Vui lòng nhập phương pháp giảng dạy!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập phương pháp giảng dạy của học phần" disabled={!!editingRecord} />
-              </Form.Item>
-
-              <Form.Item
-                name="phuongPhapDanhGia"
-                label="Phương pháp đánh giá"
-                rules={[{ required: true, message: 'Vui lòng nhập phương pháp đánh giá!' }]}
-              >
-                <TextArea rows={3} placeholder="Nhập phương pháp đánh giá của học phần" disabled={!!editingRecord} />
+                <TextArea rows={3} placeholder="Nhập phương pháp giảng dạy của học phần" />
               </Form.Item>
 
               <Form.Item
@@ -778,7 +875,7 @@ const ManageSyllabuses = () => {
                 label="Tài liệu tham khảo"
                 rules={[{ required: true, message: 'Vui lòng nhập tài liệu tham khảo!' }]}
               >
-                <TextArea rows={3} placeholder="Nhập danh sách tài liệu tham khảo" disabled={!!editingRecord} />
+                <TextArea rows={3} placeholder="Nhập danh sách tài liệu tham khảo" />
               </Form.Item>
 
               {/* Hidden field for status */}
@@ -786,6 +883,14 @@ const ManageSyllabuses = () => {
                 name="trangThai"
                 hidden
                 initialValue={0} // Default: pending approval
+              >
+                <Input />
+              </Form.Item>
+              
+              {/* Hidden field for phuongPhapDanhGia which will store selected column IDs */}
+              <Form.Item
+                name="phuongPhapDanhGia"
+                hidden
               >
                 <Input />
               </Form.Item>
@@ -812,11 +917,14 @@ const ManageSyllabuses = () => {
                 <Form.Item
                   name="cotDiem"
                 >
-                  <Checkbox.Group style={{ width: '100%' }} disabled={!!editingRecord}>
+                  <Checkbox.Group
+                    style={{ width: '100%' }}
+                    onChange={handleGradeColumnChange}
+                  >
                     <Row gutter={[16, 16]}>
                       {gradeColumns.map(column => (
                         <Col span={12} key={column.id}>
-                          <Checkbox value={column.id} disabled={!!editingRecord}>
+                          <Checkbox value={column.id}>
                             <Space direction="vertical" size={0}>
                               <Text strong>{column.tenCotDiem}</Text>
                               <Text type="secondary">Tỷ lệ: {column.tyLePhanTram}% - Hình thức: {column.hinhThuc}</Text>
@@ -830,28 +938,7 @@ const ManageSyllabuses = () => {
               </div>
             </TabPane>
 
-            <TabPane tab="File đính kèm" key="4">
-              <Form.Item
-                label="File đề cương chi tiết (PDF)"
-              >
-                <Upload
-                  fileList={fileList}
-                  onChange={({ fileList }) => setFileList(fileList)}
-                  beforeUpload={(file) => {
-                    const isPDF = file.type === 'application/pdf';
-                    if (!isPDF) {
-                      message.error('Chỉ cho phép tải lên file PDF!');
-                    }
-                    return isPDF || Upload.LIST_IGNORE;
-                  }}
-                  maxCount={1}
-                  disabled={!!editingRecord}
-                >
-                  <Button icon={<UploadOutlined />} disabled={!!editingRecord}>Tải lên file PDF</Button>
-                </Upload>
-              </Form.Item>
-              <p>Lưu ý: File đề cương phải được định dạng PDF và có dung lượng tối đa 10MB.</p>
-            </TabPane>
+            
           </Tabs>
         </Form>
       </Modal>
