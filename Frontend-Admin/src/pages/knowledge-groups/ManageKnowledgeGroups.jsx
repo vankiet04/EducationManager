@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Tooltip, message, List, Divider } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined, ReloadOutlined, EyeOutlined, BookOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tag, Tooltip, message } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, InfoCircleOutlined, ReloadOutlined, EyeOutlined } from '@ant-design/icons';
 import axios from 'axios';
 
 const { Title } = Typography;
@@ -12,7 +12,6 @@ const API_URL = 'http://localhost:8080/api';
 
 const ManageKnowledgeGroups = () => {
   const [knowledgeGroups, setKnowledgeGroups] = useState([]);
-  const [courses, setCourses] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -22,7 +21,6 @@ const ManageKnowledgeGroups = () => {
   // Fetch data when component mounts
   useEffect(() => {
     fetchKnowledgeGroups();
-    fetchCourses();
   }, []);
 
   // Fetch knowledge groups from API
@@ -39,23 +37,13 @@ const ManageKnowledgeGroups = () => {
     }
   };
 
-  // Fetch courses from API
-  const fetchCourses = async () => {
-    try {
-      const response = await axios.get(`${API_URL}/hocphan`);
-      setCourses(response.data);
-    } catch (error) {
-      console.error('Error fetching courses:', error);
-      message.error('Không thể tải dữ liệu học phần');
-    }
-  };
-
   // Handle editing a knowledge group
   const handleEdit = (record) => {
     setEditingId(record.id);
     form.setFieldsValue({
       maNhom: record.maNhom,
-      tenNhom: record.tenNhom
+      tenNhom: record.tenNhom,
+      trangThai: record.trangThai
     });
     setIsModalVisible(true);
   };
@@ -106,7 +94,7 @@ const ManageKnowledgeGroups = () => {
       const knowledgeGroupData = {
         maNhom: values.maNhom,
         tenNhom: values.tenNhom,
-        trangThai: 1 // Always set status to active
+        trangThai: values.trangThai
       };
       
       if (editingId) {
@@ -138,19 +126,17 @@ const ManageKnowledgeGroups = () => {
     setSearchText(e.target.value);
   };
 
-  // Filter data based on search text
+  // Filter data based on search text and active status
   const filteredData = knowledgeGroups
+    // Filter out inactive records (trangThai=0)
+    .filter(group => group.trangThai === 1)
+    // Then apply search text filter
     .filter(group => 
       !searchText || (
         (group.maNhom && group.maNhom.toLowerCase().includes(searchText.toLowerCase())) ||
         (group.tenNhom && group.tenNhom.toLowerCase().includes(searchText.toLowerCase()))
       )
     );
-
-  // Get courses for a specific knowledge group
-  const getCoursesForKnowledgeGroup = (groupId) => {
-    return courses.filter(course => course.nhomKienThucID === groupId);
-  };
 
   // Define table columns
   const columns = [
@@ -193,6 +179,23 @@ const ManageKnowledgeGroups = () => {
       ),
     },
     {
+      title: 'Trạng thái',
+      dataIndex: 'trangThai',
+      key: 'trangThai',
+      width: 120,
+      align: 'center',
+      render: trangThai => (
+        <Tag color={trangThai === 1 ? 'green' : 'red'}>
+          {trangThai === 1 ? 'Hoạt động' : 'Không hoạt động'}
+        </Tag>
+      ),
+      filters: [
+        { text: 'Hoạt động', value: 1 },
+        { text: 'Không hoạt động', value: 0 },
+      ],
+      onFilter: (value, record) => record.trangThai === value,
+    },
+    {
       title: 'Thao tác',
       key: 'action',
       width: 220,
@@ -219,7 +222,6 @@ const ManageKnowledgeGroups = () => {
             icon={<InfoCircleOutlined />}
             size="small"
             onClick={() => {
-              const groupCourses = getCoursesForKnowledgeGroup(record.id);
               Modal.info({
                 title: `${record.tenNhom} (${record.maNhom})`,
                 content: (
@@ -227,43 +229,10 @@ const ManageKnowledgeGroups = () => {
                     <p><strong>ID:</strong> {record.id}</p>
                     <p><strong>Mã nhóm:</strong> {record.maNhom}</p>
                     <p><strong>Tên nhóm kiến thức:</strong> {record.tenNhom}</p>
-                    
-                    <Divider />
-                    
-                    {groupCourses.length > 0 ? (
-                      <Table
-                        size="small"
-                        dataSource={groupCourses}
-                        columns={[
-                          {
-                            title: 'Mã học phần',
-                            dataIndex: 'maHp',
-                            key: 'maHp',
-                            width: 120,
-                          },
-                          {
-                            title: 'Tên học phần',
-                            dataIndex: 'tenHp',
-                            key: 'tenHp',
-                            width: 300,
-                          },
-                          {
-                            title: 'Số tín chỉ',
-                            dataIndex: 'soTinChi',
-                            key: 'soTinChi',
-                            width: 100,
-                            align: 'center',
-                          }
-                        ]}
-                        pagination={false}
-                        rowKey="id"
-                      />
-                    ) : (
-                      <p style={{ color: '#999', fontStyle: 'italic' }}>Chưa có học phần nào thuộc nhóm kiến thức này</p>
-                    )}
+                    <p><strong>Trạng thái:</strong> {record.trangThai === 1 ? 'Hoạt động' : 'Không hoạt động'}</p>
                   </div>
                 ),
-                width: 700,
+                width: 500,
               });
             }}
           />
