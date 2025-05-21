@@ -20,11 +20,22 @@ public class PhanCongGiangDayService {
         if (entity == null) return null;
         PhanCongGiangDayDTO dto = new PhanCongGiangDayDTO();
         dto.setId(entity.getId());
-        dto.setNhomId(entity.getNhom() != null ? entity.getNhom().getId() : null);
-        dto.setGiangVienId(entity.getGiangVien() != null ? entity.getGiangVien().getId() : null);
+        dto.setNhomId(entity.getNhomId());
+        dto.setGiangVienId(entity.getGiangVienId());
         dto.setVaiTro(entity.getVaiTro());
         dto.setSoTiet(entity.getSoTiet());
         return dto;
+    }
+    
+    private PhanCongGiangDay toEntity(PhanCongGiangDayDTO dto) {
+        if (dto == null) return null;
+        PhanCongGiangDay entity = new PhanCongGiangDay();
+        entity.setId(dto.getId());
+        entity.setNhomId(dto.getNhomId());
+        entity.setGiangVienId(dto.getGiangVienId());
+        entity.setVaiTro(dto.getVaiTro());
+        entity.setSoTiet(dto.getSoTiet());
+        return entity;
     }
 
     public List<PhanCongGiangDayDTO> getAll() {
@@ -43,8 +54,10 @@ public class PhanCongGiangDayService {
         return phanCongGiangDayRepository.findByGiangVienId(giangVienId).stream().map(this::toDTO).collect(Collectors.toList());
     }
 
-    public PhanCongGiangDay save(PhanCongGiangDay phanCongGiangDay) {
-        return phanCongGiangDayRepository.save(phanCongGiangDay);
+    public PhanCongGiangDayDTO save(PhanCongGiangDayDTO dto) {
+        PhanCongGiangDay entity = toEntity(dto);
+        entity = phanCongGiangDayRepository.save(entity);
+        return toDTO(entity);
     }
 
     public void delete(Integer id) {

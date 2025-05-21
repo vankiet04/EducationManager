@@ -10,4 +10,6 @@ import com.example.net.guides.springboot.model.KeHoachDayHoc;
 @Repository
 public interface KeHoachDayHocRepository extends JpaRepository<KeHoachDayHoc, Integer> {
 
+    List<KeHoachDayHoc> findByNamHocAndHocKy(Integer namHoc, Integer hocKy);
+
 }

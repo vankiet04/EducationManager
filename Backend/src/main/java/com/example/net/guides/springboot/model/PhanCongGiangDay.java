@@ -12,20 +12,18 @@ import lombok.Data;
 
 @Data
 @Entity
-@Table(name = "phanconggiangday")
+@Table(name = "ctdt_phanconggiangday")
 public class PhanCongGiangDay {
     
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Integer id;
 
-    @ManyToOne
-    @JoinColumn(name = "nhom_id")
-    private KeHoachMonHom nhom;
+    @Column(name = "nhom_id")
+    private Integer nhomId;
 
-    @ManyToOne
-    @JoinColumn(name = "giang_vien_id")
-    private GiangVien giangVien;
+    @Column(name = "giang_vien_id")
+    private Integer giangVienId;
 
     @Column(name = "vai_tro", length = 50)
     private String vaiTro;

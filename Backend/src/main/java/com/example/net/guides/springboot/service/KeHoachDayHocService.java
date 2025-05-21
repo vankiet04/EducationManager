@@ -82,4 +82,11 @@ public class KeHoachDayHocService {
 
     }
 
+    public List<KeHoachDayHocDTO> findByNamHocAndHocKy(Integer namHoc, Integer hocKy) {
+        return keHoachDayHocRepo.findByNamHocAndHocKy(namHoc, hocKy)
+                .stream()
+                .map(this::ChuyenDoiDTO)
+                .collect(Collectors.toList());
+    }
+
 }

@@ -170,6 +170,7 @@ const ManageTeachingPlan = () => {
 
   // Handle year filter change
   const handleYearChange = (value) => {
+    // Nếu là "all" thì lưu giá trị "all", ngược lại lưu số nguyên
     setYearFilter(value);
   };
 
@@ -280,11 +281,19 @@ const ManageTeachingPlan = () => {
   const handleSubmit = async (values) => {
     setLoading(true);
     try {
+      // Đảm bảo năm học là số nguyên
+      let namHoc = values.nam_hoc;
+      if (typeof namHoc === 'string' && namHoc.includes('-')) {
+        // Nếu năm học là chuỗi dạng "2023-2024", lấy phần đầu và chuyển thành số
+        const yearParts = namHoc.split('-');
+        namHoc = parseInt(yearParts[0]);
+      }
+
       const planData = {
         ctdt_id: values.ctdt_id,
         hoc_phan_id: values.hoc_phan_id,
         hoc_ky: values.hoc_ky,
-        nam_hoc: values.nam_hoc
+        nam_hoc: namHoc
       };
 
       if (editingId) {
@@ -620,10 +629,25 @@ const ManageTeachingPlan = () => {
               style={{ width: '50%' }}
             >
               <InputNumber 
-                style={{ width: '100%' }} 
                 min={2000} 
-                max={2100}
+                max={2050}
                 placeholder="Ví dụ: 2023"
+                style={{ width: '100%' }}
+                formatter={value => {
+                  if (value) {
+                    return `${value}-${Number(value) + 1}`;
+                  }
+                  return '';
+                }}
+                parser={value => {
+                  if (value) {
+                    const parts = value.split('-');
+                    if (parts.length > 0) {
+                      return parseInt(parts[0], 10);
+                    }
+                  }
+                  return '';
+                }}
               />
             </Form.Item>
           </div>

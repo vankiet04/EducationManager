@@ -13,7 +13,6 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
-import com.example.net.guides.springboot.model.PhanCongGiangDay;
 import com.example.net.guides.springboot.dto.PhanCongGiangDayDTO;
 import com.example.net.guides.springboot.service.PhanCongGiangDayService;
 
@@ -49,15 +48,15 @@ public class PhanCongGiangDayController {
     }
 
     @PostMapping
-    public ResponseEntity<PhanCongGiangDay> create(@RequestBody PhanCongGiangDay phanCongGiangDay) {
-        return ResponseEntity.ok(phanCongGiangDayService.save(phanCongGiangDay));
+    public ResponseEntity<PhanCongGiangDayDTO> create(@RequestBody PhanCongGiangDayDTO phanCongGiangDayDTO) {
+        return ResponseEntity.ok(phanCongGiangDayService.save(phanCongGiangDayDTO));
     }
 
     @PutMapping("/{id}")
-    public ResponseEntity<PhanCongGiangDay> update(@PathVariable Integer id, @RequestBody PhanCongGiangDay phanCongGiangDay) {
+    public ResponseEntity<PhanCongGiangDayDTO> update(@PathVariable Integer id, @RequestBody PhanCongGiangDayDTO phanCongGiangDayDTO) {
         if (phanCongGiangDayService.getById(id) != null) {
-            phanCongGiangDay.setId(id);
-            return ResponseEntity.ok(phanCongGiangDayService.save(phanCongGiangDay));
+            phanCongGiangDayDTO.setId(id);
+            return ResponseEntity.ok(phanCongGiangDayService.save(phanCongGiangDayDTO));
         }
         return ResponseEntity.notFound().build();
     }

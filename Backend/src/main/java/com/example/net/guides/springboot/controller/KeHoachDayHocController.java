@@ -67,4 +67,12 @@ public class KeHoachDayHocController {
         keHoachDayHocService.delete(id);
         return ResponseEntity.ok().build();
     }
+
+    @GetMapping("/search")
+    public ResponseEntity<List<KeHoachDayHocDTO>> search(
+            @RequestParam Integer namHoc,
+            @RequestParam Integer hocKy) {
+        List<KeHoachDayHocDTO> khdh = keHoachDayHocService.findByNamHocAndHocKy(namHoc, hocKy);
+        return ResponseEntity.ok(khdh);
+    }
 }
