@@ -51,10 +51,9 @@ const Login = () => {
 
   return (
     <div className="login" style={{ display: 'flex', minHeight: '100vh' }}>
-      {/* Left side - Login Form */}
-      <div className="login_form" style={{ flex: '1', padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+      {/* Left side - Login Form */}      <div className="login_form" style={{ flex: '1', padding: '40px', display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
         <div className="login_content" style={{ marginBottom: '30px', textAlign: 'center' }}>
-          <h2 className="page_heading" style={{ fontSize: '28px', fontWeight: '600', color: '#333' }}>EduManager Login</h2>
+          <h2 className="page_heading" style={{ fontSize: '28px', fontWeight: '600', color: '#1890ff' } }>EduManager Login</h2>
         </div>
         <form className="form" onSubmit={handleLogin} style={{ width: '100%', maxWidth: '400px', margin: '0 auto' }}>
           <div className="form_control" style={{ marginBottom: '20px' }}>
@@ -87,7 +86,7 @@ const Login = () => {
             />
             <Link to="#" style={{ color: '#1163d7', fontSize: '14px', textDecoration: 'none' }}>Forgot Password?</Link>
           </div>
-          {loginError && <div className="incorrect" style={{ color: 'red', marginBottom: '15px', fontSize: '14px' }}>Incorrect username or password</div>}
+          {loginError && <div className="incorrect" style={{ color: 'red', marginBottom: '15px', fontSize: '14px' }}>Sai tài khoản hoặc mật khẩu</div>}
           <div className="form_control">
             <Button
               label="Login"
