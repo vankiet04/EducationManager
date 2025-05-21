@@ -1,6 +1,7 @@
 package com.example.net.guides.springboot.controller;
 
 import com.example.net.guides.springboot.dto.UserDto;
+import com.example.net.guides.springboot.model.Role;
 import com.example.net.guides.springboot.model.User;
 import com.example.net.guides.springboot.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -56,14 +57,39 @@ public class AuthRestController {
             String username = loginRequest.get("username");
             String password = loginRequest.get("password");
             
+            // First, check if the user exists
+            User user = userService.findUserByUsername(username);
+            if (user == null) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                    .body(Map.of("message", "Thông tin đăng nhập không chính xác!"));
+            }
+            
+            // Check if the user has admin role (role ID 3)
+            boolean isAdmin = false;
+            for (Role role : user.getRoles()) {
+                if (role.getId() == 3L) {
+                    isAdmin = true;
+                    break;
+                }
+            }
+            
+            // If not admin, also check the vaiTro field (for backward compatibility)
+            if (!isAdmin && "3".equals(user.getVaiTro())) {
+                isAdmin = true;
+            }
+            
+            // If not admin, deny login
+            if (!isAdmin) {
+                return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("message", "Chỉ tài khoản admin mới được phép đăng nhập!"));
+            }
+            
+            // Now authenticate the user
             Authentication authentication = authenticationManager.authenticate(
                 new UsernamePasswordAuthenticationToken(username, password)
             );
             
             SecurityContextHolder.getContext().setAuthentication(authentication);
-            
-            // Get the user details
-            User user = userService.findUserByUsername(username);
             
             Map<String, Object> response = new HashMap<>();
             response.put("id", user.getId());

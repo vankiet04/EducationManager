@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Select, Tag, Modal, Form, Tooltip, Divider, InputNumber } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
   ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
@@ -6,6 +6,9 @@ import axios from 'axios';
 
 const { Title } = Typography;
 const { Option } = Select;
+
+// Define API base URL
+const API_URL = 'http://localhost:8080';
 
 const ManageTeachingPlan = () => {
   const [plans, setPlans] = useState([]);
@@ -17,76 +20,135 @@ const ManageTeachingPlan = () => {
   const [searchText, setSearchText] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('all');
   const [yearFilter, setYearFilter] = useState('all');
+  const [curriculumFilter, setCurriculumFilter] = useState('all');
   const [form] = Form.useForm();
-
-  // Mock data for testing
-  const mockPlans = [
-    {
-      id: 1,
-      ctdt_id: 1,
-      hoc_phan_id: 1,
-      hoc_ky: 1,
-      nam_hoc: 2023
-    },
-    {
-      id: 2,
-      ctdt_id: 1,
-      hoc_phan_id: 2,
-      hoc_ky: 2,
-      nam_hoc: 2023
-    },
-    {
-      id: 3,
-      ctdt_id: 2,
-      hoc_phan_id: 3,
-      hoc_ky: 1,
-      nam_hoc: 2024
-    }
-  ];
-
-  // Mock data for courses
-  const mockCourses = [
-    { id: 1, ma_hoc_phan: 'CS101', ten_hoc_phan: 'Nhập môn lập trình', so_tin_chi: 3 },
-    { id: 2, ma_hoc_phan: 'CS201', ten_hoc_phan: 'Cấu trúc dữ liệu và giải thuật', so_tin_chi: 4 },
-    { id: 3, ma_hoc_phan: 'CS301', ten_hoc_phan: 'Cơ sở dữ liệu', so_tin_chi: 4 },
-    { id: 4, ma_hoc_phan: 'MA101', ten_hoc_phan: 'Đại số tuyến tính', so_tin_chi: 3 }
-  ];
-
-  // Mock data for curriculums
-  const mockCurriculums = [
-    { id: 1, ma_ctdt: 'CTDT-CNTT', ten_ctdt: 'Công nghệ thông tin' },
-    { id: 2, ma_ctdt: 'CTDT-KTPM', ten_ctdt: 'Kỹ thuật phần mềm' },
-    { id: 3, ma_ctdt: 'CTDT-HTTT', ten_ctdt: 'Hệ thống thông tin' }
-  ];
 
   // Fetch data when component mounts
   useEffect(() => {
     fetchData();
+    // Also check the raw API data
+    debugRawApiData();
   }, []);
+
+  // Debug function to check raw API data
+  const debugRawApiData = async () => {
+    try {
+      // Get raw data directly from endpoints
+      const plansRaw = await axios.get(`${API_URL}/api/KeHoachDayHoc`);
+      const coursesRaw = await axios.get(`${API_URL}/api/hocphan`);
+      const curriculumsRaw = await axios.get(`${API_URL}/api/thongTinChung`);
+
+      console.log('===== DEBUG RAW API DATA =====');
+      console.log('Raw plans data:', plansRaw.data);
+      if (plansRaw.data && plansRaw.data.length > 0) {
+        console.log('First plan entry fields:', Object.keys(plansRaw.data[0]));
+        console.log('First plan entry values:', plansRaw.data[0]);
+      }
+      
+      console.log('Raw courses data:', coursesRaw.data);
+      if (coursesRaw.data && coursesRaw.data.length > 0) {
+        console.log('First course entry fields:', Object.keys(coursesRaw.data[0]));
+        console.log('First course entry values:', coursesRaw.data[0]);
+      }
+      
+      console.log('Raw curriculums data:', curriculumsRaw.data);
+      if (curriculumsRaw.data && curriculumsRaw.data.length > 0) {
+        console.log('First curriculum entry fields:', Object.keys(curriculumsRaw.data[0]));
+        console.log('First curriculum entry values:', curriculumsRaw.data[0]);
+      }
+      console.log('================================');
+    } catch (error) {
+      console.error('Debug API error:', error);
+    }
+  };
 
   // Fetch all necessary data
   const fetchData = async () => {
     setLoading(true);
     try {
-      // In a real application, these would be API calls
-      // const plansResponse = await axios.get('/api/ke-hoach-day-hoc');
-      // const coursesResponse = await axios.get('/api/hoc-phan');
-      // const curriculumsResponse = await axios.get('/api/ctdt');
+      // Get teaching plans from backend API (kehoachdayhoc)
+      const plansResponse = await axios.get(`${API_URL}/api/KeHoachDayHoc`);
       
-      // setPlans(plansResponse.data);
-      // setCourses(coursesResponse.data);
-      // setCurriculums(curriculumsResponse.data);
+      // Get courses from backend API (hocphan)
+      const coursesResponse = await axios.get(`${API_URL}/api/hocphan`);
+      
+      // Get curriculums from backend API (thongtinchung)
+      const curriculumsResponse = await axios.get(`${API_URL}/api/thongTinChung`);
+      
+      console.log('Plans data:', plansResponse.data);
+      console.log('Courses data:', coursesResponse.data);
+      console.log('Curriculums data:', curriculumsResponse.data);
+      
+      // Check if data has proper structure and log first item
+      if (plansResponse.data.length > 0) {
+        console.log('First plan item:', plansResponse.data[0]);
+      }
+      if (coursesResponse.data.length > 0) {
+        console.log('First course item:', coursesResponse.data[0]);
+      }
+      if (curriculumsResponse.data.length > 0) {
+        console.log('First curriculum item:', curriculumsResponse.data[0]);
+      }
 
-      // Using mock data for now
-      setPlans(mockPlans);
-      setCourses(mockCourses);
-      setCurriculums(mockCurriculums);
+      // Normalize curriculum data - try all possible field names
+      const normalizedCurriculums = curriculumsResponse.data.map(curriculum => ({
+        id: Number(curriculum.id),
+        ma_ctdt: curriculum.ma_ctdt || curriculum.maCTDT || curriculum.maCtdt || '',
+        ten_ctdt: curriculum.ten_ctdt || curriculum.tenCTDT || curriculum.tenCtdt || curriculum.name || ''
+      }));
+
+      // Normalize course data - try all possible field names
+      const normalizedCourses = coursesResponse.data.map(course => ({
+        id: Number(course.id),
+        ma_hp: course.ma_hp || course.maHP || course.maHp || course.code || '',
+        ten_hp: course.ten_hp || course.tenHP || course.tenHp || course.name || '',
+        so_tin_chi: course.so_tin_chi || course.soTinChi || course.soTinchi || course.credits || 0
+      }));
+      
+      // Normalize teaching plan data - try all possible field names
+      const normalizedPlans = plansResponse.data.map(plan => ({
+        id: Number(plan.id),
+        ctdt_id: Number(plan.ctdt_id || plan.ctdtId || plan.ctdt || 0),
+        hoc_phan_id: Number(plan.hoc_phan_id || plan.hocPhanId || plan.hocphan || 0),
+        hoc_ky: Number(plan.hoc_ky || plan.hocKy || plan.hocky || 1),
+        nam_hoc: Number(plan.nam_hoc || plan.namHoc || plan.namhoc || 0)
+      }));
+      
+      console.log('Normalized plans:', normalizedPlans);
+      console.log('Normalized courses:', normalizedCourses);
+      console.log('Normalized curriculums:', normalizedCurriculums);
+      
+      // Log the structure of the first entries
+      if (normalizedPlans.length > 0 && normalizedCourses.length > 0 && normalizedCurriculums.length > 0) {
+        const planExample = normalizedPlans[0];
+        const courseExample = normalizedCourses.find(c => c.id === planExample.hoc_phan_id);
+        const curriculumExample = normalizedCurriculums.find(c => c.id === planExample.ctdt_id);
+        
+        console.log("==== DATA FORMAT CHECK ====");
+        console.log("Example Plan:", planExample);
+        console.log("Example Course match:", courseExample);
+        console.log("Example Curriculum match:", curriculumExample);
+        
+        // Debug type comparisons
+        if (courseExample) {
+          console.log("Course ID types:", 
+                      typeof planExample.hoc_phan_id, planExample.hoc_phan_id, 
+                      typeof courseExample.id, courseExample.id);
+        }
+        
+        if (curriculumExample) {
+          console.log("Curriculum ID types:", 
+                      typeof planExample.ctdt_id, planExample.ctdt_id, 
+                      typeof curriculumExample.id, curriculumExample.id);
+        }
+        console.log("=========================");
+      }
+      
+      setPlans(normalizedPlans);
+      setCourses(normalizedCourses);
+      setCurriculums(normalizedCurriculums);
     } catch (error) {
       console.error('Error fetching data:', error);
-      // Fallback to mock data
-      setPlans(mockPlans);
-      setCourses(mockCourses);
-      setCurriculums(mockCurriculums);
       Modal.error({
         title: 'Lỗi',
         content: 'Không thể tải dữ liệu. Vui lòng thử lại sau.'
@@ -111,29 +173,34 @@ const ManageTeachingPlan = () => {
     setYearFilter(value);
   };
 
+  // Handle curriculum filter change
+  const handleCurriculumChange = (value) => {
+    setCurriculumFilter(value);
+    // Reset semester filter when curriculum changes
+    setSemesterFilter('all');
+  };
+
+  // Get unique semesters for the selected curriculum
+  const getUniqueSemesters = () => {
+    let filteredPlans = plans;
+    
+    // Filter by curriculum if selected
+    if (curriculumFilter !== 'all') {
+      filteredPlans = filteredPlans.filter(plan => plan.ctdt_id === Number(curriculumFilter));
+    }
+    
+    // Get unique semesters from the filtered plans
+    const semesters = [...new Set(filteredPlans.map(plan => plan.hoc_ky))];
+    return semesters.sort((a, b) => a - b); // Sort ascending
+  };
+
   // Filter data based on search and filters
   const filteredData = () => {
-    let result = plans.map(plan => {
-      const course = courses.find(c => c.id === plan.hoc_phan_id) || {};
-      const curriculum = curriculums.find(c => c.id === plan.ctdt_id) || {};
-      return {
-        ...plan,
-        ma_hoc_phan: course.ma_hoc_phan,
-        ten_hoc_phan: course.ten_hoc_phan,
-        so_tin_chi: course.so_tin_chi,
-        ma_ctdt: curriculum.ma_ctdt,
-        ten_ctdt: curriculum.ten_ctdt
-      };
-    });
+    let result = plans;
 
-    // Filter by search text
-    if (searchText) {
-      result = result.filter(plan => 
-        (plan.ma_hoc_phan && plan.ma_hoc_phan.toLowerCase().includes(searchText.toLowerCase())) ||
-        (plan.ten_hoc_phan && plan.ten_hoc_phan.toLowerCase().includes(searchText.toLowerCase())) ||
-        (plan.ma_ctdt && plan.ma_ctdt.toLowerCase().includes(searchText.toLowerCase())) ||
-        (plan.ten_ctdt && plan.ten_ctdt.toLowerCase().includes(searchText.toLowerCase()))
-      );
+    // Filter by curriculum
+    if (curriculumFilter !== 'all') {
+      result = result.filter(plan => plan.ctdt_id === Number(curriculumFilter));
     }
 
     // Filter by semester
@@ -144,6 +211,26 @@ const ManageTeachingPlan = () => {
     // Filter by year
     if (yearFilter !== 'all') {
       result = result.filter(plan => plan.nam_hoc === parseInt(yearFilter));
+    }
+
+    // Filter by search text
+    if (searchText) {
+      result = result.filter(plan => {
+        const course = courses.find(c => c.id === plan.hoc_phan_id) || {};
+        const curriculum = curriculums.find(c => c.id === plan.ctdt_id) || {};
+        
+        // Search in course name/code
+        const courseMatch = 
+          (course.ma_hp && course.ma_hp.toLowerCase().includes(searchText.toLowerCase())) ||
+          (course.ten_hp && course.ten_hp.toLowerCase().includes(searchText.toLowerCase()));
+        
+        // Search in curriculum name/code
+        const curriculumMatch = 
+          (curriculum.ma_ctdt && curriculum.ma_ctdt.toLowerCase().includes(searchText.toLowerCase())) ||
+          (curriculum.ten_ctdt && curriculum.ten_ctdt.toLowerCase().includes(searchText.toLowerCase()));
+          
+        return courseMatch || curriculumMatch;
+      });
     }
 
     return result;
@@ -169,8 +256,7 @@ const ManageTeachingPlan = () => {
       onOk: async () => {
         setLoading(true);
         try {
-          // In a real application, this would be an API call
-          // await axios.delete(`/api/ke-hoach-day-hoc/${id}`);
+          await axios.delete(`${API_URL}/api/KeHoachDayHoc/${id}`);
           
           const updatedPlans = plans.filter(plan => plan.id !== id);
           setPlans(updatedPlans);
@@ -203,8 +289,8 @@ const ManageTeachingPlan = () => {
 
       if (editingId) {
         // Update existing plan
-        // In a real application, this would be an API call
-        // await axios.put(`/api/ke-hoach-day-hoc/${editingId}`, planData);
+        planData.id = editingId;
+        await axios.put(`${API_URL}/api/KeHoachDayHoc/${editingId}`, planData);
         
         const updatedPlans = plans.map(plan => {
           if (plan.id === editingId) {
@@ -219,14 +305,8 @@ const ManageTeachingPlan = () => {
         });
       } else {
         // Create new plan
-        // In a real application, this would be an API call
-        // const response = await axios.post('/api/ke-hoach-day-hoc', planData);
-        // const newPlan = response.data;
-        
-        const newPlan = {
-          id: Math.max(...plans.map(p => p.id), 0) + 1,
-          ...planData
-        };
+        const response = await axios.post(`${API_URL}/api/KeHoachDayHoc`, planData);
+        const newPlan = response.data;
         
         setPlans([...plans, newPlan]);
         Modal.success({
@@ -263,20 +343,46 @@ const ManageTeachingPlan = () => {
     {
       title: 'Chương trình đào tạo',
       key: 'ctdt',
-      render: (text, record) => (
-        <Tooltip title={record.ten_ctdt || ''}>
-          <span>{record.ma_ctdt || `ID: ${record.ctdt_id}`}</span>
-        </Tooltip>
-      ),
+      render: (text, record) => {
+        // Try to find the curriculum by making sure IDs are compared as strings
+        // This handles cases where IDs might be numbers in one place and strings in another
+        const currId = record.ctdt_id;
+        const curriculum = curriculums.find(c => String(c.id) === String(currId));
+        
+        if (!curriculum) {
+          console.log(`No curriculum found for ID: ${currId}`);
+          return <span>Chương trình không xác định (ID: {currId || 'N/A'})</span>;
+        }
+        
+        // Based on thongtinchung table structure
+        return (
+          <Tooltip title={curriculum.ten_ctdt || ''}>
+            <span>{curriculum.ma_ctdt || ''} - {curriculum.ten_ctdt || 'Chương trình không xác định'}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Học phần',
       key: 'hoc_phan',
-      render: (text, record) => (
-        <Tooltip title={`${record.ten_hoc_phan || ''} (${record.so_tin_chi || ''}TC)`}>
-          <span>{record.ma_hoc_phan || `ID: ${record.hoc_phan_id}`} - {record.ten_hoc_phan || ''}</span>
-        </Tooltip>
-      ),
+      render: (text, record) => {
+        // Try to find the course by making sure IDs are compared as strings
+        // This handles cases where IDs might be numbers in one place and strings in another
+        const hpId = record.hoc_phan_id;
+        const course = courses.find(c => String(c.id) === String(hpId));
+        
+        if (!course) {
+          console.log(`No course found for ID: ${hpId}`);
+          return <span>Học phần không xác định (ID: {hpId || 'N/A'})</span>;
+        }
+        
+        // Based on hocphan table structure
+        return (
+          <Tooltip title={`${course.ten_hp || ''} (${course.so_tin_chi || ''}TC)`}>
+            <span>{course.ma_hp || ''} - {course.ten_hp || 'Học phần không xác định'}</span>
+          </Tooltip>
+        );
+      },
     },
     {
       title: 'Học kỳ',
@@ -331,7 +437,7 @@ const ManageTeachingPlan = () => {
                       <p><strong>Mã kế hoạch:</strong> {record.id}</p>
                       <Divider style={{ margin: '8px 0' }} />
                       <p><strong>Chương trình đào tạo:</strong> {curriculum.ten_ctdt || 'N/A'} ({curriculum.ma_ctdt || 'N/A'})</p>
-                      <p><strong>Học phần:</strong> {course.ten_hoc_phan || 'N/A'} ({course.ma_hoc_phan || 'N/A'})</p>
+                      <p><strong>Học phần:</strong> {course.ten_hp || 'N/A'} ({course.ma_hp || 'N/A'})</p>
                       <p><strong>Số tín chỉ:</strong> {course.so_tin_chi || 'N/A'}</p>
                       <p><strong>Học kỳ:</strong> {record.hoc_ky}</p>
                       <p><strong>Năm học:</strong> {record.nam_hoc}-{record.nam_hoc + 1}</p>
@@ -373,15 +479,31 @@ const ManageTeachingPlan = () => {
             onChange={handleSearch}
           />
           <Select 
+            placeholder="Chương trình đào tạo" 
+            style={{ width: 200 }} 
+            value={curriculumFilter}
+            onChange={handleCurriculumChange}
+          >
+            <Option value="all">Tất cả chương trình</Option>
+            {curriculums.map(curriculum => (
+              <Option key={curriculum.id} value={curriculum.id.toString()}>
+                {curriculum.ma_ctdt} - {curriculum.ten_ctdt}
+              </Option>
+            ))}
+          </Select>
+          <Select 
             placeholder="Học kỳ" 
             style={{ width: 120 }} 
             value={semesterFilter}
             onChange={handleSemesterChange}
+            disabled={curriculumFilter === 'all'}
           >
             <Option value="all">Tất cả HK</Option>
-            <Option value="1">Học kỳ 1</Option>
-            <Option value="2">Học kỳ 2</Option>
-            <Option value="3">Học kỳ 3</Option>
+            {getUniqueSemesters().map(semester => (
+              <Option key={semester} value={semester.toString()}>
+                Học kỳ {semester}
+              </Option>
+            ))}
           </Select>
           <Select 
             placeholder="Năm học" 
@@ -471,7 +593,7 @@ const ManageTeachingPlan = () => {
             >
               {courses.map(course => (
                 <Option key={course.id} value={course.id}>
-                  {course.ma_hoc_phan} - {course.ten_hoc_phan} ({course.so_tin_chi} TC)
+                  {course.ma_hp} - {course.ten_hp} ({course.so_tin_chi} TC)
                 </Option>
               ))}
             </Select>
