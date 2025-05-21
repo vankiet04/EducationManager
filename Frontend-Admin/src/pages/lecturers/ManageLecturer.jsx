@@ -1,8 +1,9 @@
 // ManageLecturer.jsx - Trang quản lý giảng viên
 import React, { useState, useEffect } from 'react';
-import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message, Row, Col, Statistic, Divider, List, Badge } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, PieChartOutlined } from '@ant-design/icons';
+import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message, Row, Col, Statistic, Divider, List, Badge, Upload } from 'antd';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, PieChartOutlined, UploadOutlined } from '@ant-design/icons';
 import axios from 'axios';
+import * as XLSX from 'xlsx';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -35,6 +36,7 @@ const ManageLecturer = () => {
   const [availableUsers, setAvailableUsers] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isImportModalVisible, setIsImportModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [form] = Form.useForm();
@@ -163,20 +165,6 @@ const ManageLecturer = () => {
     });
   };
 
-  // Handle assigning user to lecturer
-  const handleAssignUser = async (lecturerId, userId) => {
-    try {
-      setLoading(true);
-      await axios.post(`/api/giangvien/${lecturerId}/assign-user/${userId}`);
-      message.success('Gán tài khoản cho giảng viên thành công');
-      fetchLecturers(); // Refresh the list
-    } catch (error) {
-      console.error('Error assigning user:', error);
-      message.error('Không thể gán tài khoản cho giảng viên');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   // Handle form submit (add/edit lecturer)
   const handleSubmit = async (values) => {
@@ -197,16 +185,20 @@ const ManageLecturer = () => {
       };
       
       console.log('Sending lecturer data:', lecturerData);
-      
-      if (editingId) {
-        // Update existing lecturer
-        await axios.put(`/api/giangvien/${editingId}`, lecturerData);
-        message.success('Cập nhật giảng viên thành công');
-      } else {
-        // Create new lecturer
-        await axios.post('/api/giangvien', lecturerData);
-        message.success('Thêm giảng viên mới thành công');
-      }
+          if (editingId) {
+      // Update existing lecturer
+      console.log('Updating lecturer with ID:', editingId);
+      console.log('Update data:', lecturerData);
+      const response = await axios.put(`/api/giangvien/${editingId}`, lecturerData);
+      console.log('Update response:', response.data);
+      message.success('Cập nhật giảng viên thành công');
+    } else {
+      // Create new lecturer
+      console.log('Creating new lecturer:', lecturerData);
+      const response = await axios.post('/api/giangvien', lecturerData);
+      console.log('Create response:', response.data);
+      message.success('Thêm giảng viên mới thành công');
+    }
       
       setIsModalVisible(false);
       form.resetFields();
@@ -433,8 +425,7 @@ const ManageLecturer = () => {
             onClick={() => handleEdit(record)}
           >
             Sửa
-          </Button>
-          <Button 
+          </Button>          <Button 
             danger 
             icon={<DeleteOutlined />} 
             size="small"
@@ -442,19 +433,6 @@ const ManageLecturer = () => {
           >
             Vô hiệu hóa
           </Button>
-          {!record.userId && (
-            <Select
-              style={{ width: 120 }}
-              placeholder="Gán tài khoản"
-              onChange={(userId) => handleAssignUser(record.id, userId)}
-            >
-              {availableUsers.map(user => (
-                <Option key={user.id} value={user.id}>
-                  {user.username}
-                </Option>
-              ))}
-            </Select>
-          )}
         </Space>
       ),
     },
@@ -534,10 +512,15 @@ const ManageLecturer = () => {
       >
         <Input.TextArea placeholder="Các lĩnh vực chuyên môn, ngăn cách bằng dấu phẩy" />
       </Form.Item>
-      
+
       <Form.Item
         name="userId"
         label="Tài khoản người dùng"
+        tooltip={
+          editingId 
+            ? 'Nếu muốn thay đổi tài khoản, hãy chọn một tài khoản mới. Nếu không, hãy giữ nguyên tài khoản hiện tại'
+            : 'Vui lòng chọn tài khoản để liên kết với giảng viên'
+        }
         rules={[
           { 
             required: !editingId, 
@@ -545,28 +528,20 @@ const ManageLecturer = () => {
           }
         ]}
       >
-        <Select disabled={!!editingId}>
-          <Option value={null}>-- Chọn tài khoản --</Option>
-          {/* Show the currently assigned user when editing */}
+        <Select placeholder="Chọn tài khoản" style={{ width: '100%' }}>
           {editingId && form.getFieldValue('userId') && (
-            <Option value={form.getFieldValue('userId')}>
-              {lecturers.find(l => l.id === editingId)?.user_username || 'Unknown'}
+            <Option key={form.getFieldValue('userId')} value={form.getFieldValue('userId')}>
+              {lecturers.find(l => l.id === editingId)?.user_username || 'Unknown'} (Tài khoản hiện tại)
             </Option>
           )}
-          {/* Show available users when adding new */}
-          {!editingId && availableUsers.map(user => (
+          {availableUsers.map(user => (
             <Option key={user.id} value={user.id}>
               {user.username} - {user.hoTen || ''} ({user.email || ''})
             </Option>
           ))}
         </Select>
-        {editingId && (
-          <div style={{ fontSize: '12px', color: '#888', marginTop: '4px' }}>
-            Không thể thay đổi tài khoản đã liên kết với giảng viên
-          </div>
-        )}
       </Form.Item>
-      
+
       <Form.Item style={{ marginBottom: 0, textAlign: 'right' }}>
         <Space>
           <Button 
@@ -584,6 +559,157 @@ const ManageLecturer = () => {
       </Form.Item>
     </Form>
   );
+
+  const handleImport = (file) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const worksheet = workbook.Sheets[workbook.SheetNames[0]];
+        const jsonData = XLSX.utils.sheet_to_json(worksheet);
+
+        console.log('Excel data:', jsonData); // Log để kiểm tra dữ liệu
+        console.log('First row:', jsonData[0]); // Log row đầu tiên
+        console.log('Headers:', Object.keys(jsonData[0])); // Log tên các cột
+
+        // Validate required columns and normalize header names
+        const headerMap = {
+          'Họ và tên': 'họ tên',
+          'Họ Tên': 'họ tên',
+          'ho ten': 'họ tên',
+          'Bộ môn': 'bộ môn',
+          'Bo mon': 'bộ môn',
+          'Khoa': 'khoa',
+          'Trình độ': 'trình độ',
+          'Trinh do': 'trình độ',
+          'Chuyên môn': 'chuyên môn',
+          'Chuyen mon': 'chuyên môn'
+        };
+
+        // Normalize headers
+        const normalizedHeaders = {};
+        Object.keys(jsonData[0]).forEach(header => {
+          normalizedHeaders[header] = headerMap[header] || header.toLowerCase();
+        });
+
+        console.log('Normalized headers:', normalizedHeaders);
+
+        // Validate required columns with normalized headers
+        const requiredColumns = ['họ tên', 'bộ môn', 'khoa', 'trình độ', 'chuyên môn'];
+        const headers = Object.values(normalizedHeaders);
+        
+        const missingColumns = requiredColumns.filter(col => 
+          !headers.includes(col)
+        );
+
+        if (missingColumns.length > 0) {
+          Modal.error({
+            title: 'Lỗi định dạng file',
+            content: `File thiếu các cột bắt buộc: ${missingColumns.join(', ')}\nCác cột hiện có: ${headers.join(', ')}`
+          });
+          return;
+        }
+
+        // Process data with normalized headers
+        const lecturers = jsonData.map(row => {
+          const normalized = {};
+          Object.keys(row).forEach(key => {
+            const normalizedKey = normalizedHeaders[key];
+            normalized[normalizedKey] = row[key];
+          });
+
+          return {
+            maGiangVien: null, // Will be auto-generated
+            hoTen: normalized['họ tên'],
+            boMon: normalized['bộ môn'],
+            khoa: normalized['khoa'],
+            trinhDo: validateTrinhDo(normalized['trình độ']),
+            chuyenMon: normalized['chuyên môn'],
+            trangThai: 1
+          };
+        });
+
+        console.log('Processed lecturers:', lecturers); // Log dữ liệu sau khi xử lý
+
+        // Import lecturers
+        importLecturers(lecturers);
+      } catch (error) {
+        console.error('Error processing Excel file:', error);
+        Modal.error({
+          title: 'Lỗi xử lý file',
+          content: 'Không thể đọc dữ liệu từ file Excel. Vui lòng kiểm tra định dạng file và tên các cột.'
+        });
+      }
+    };
+    reader.readAsArrayBuffer(file);
+    return false; // Prevent default upload behavior
+  };
+
+  const validateTrinhDo = (trinhDo) => {
+    const validLevels = ['Thạc sĩ', 'Tiến sĩ', 'Phó Giáo sư', 'Giáo sư'];
+    const normalized = trinhDo?.trim();
+    return validLevels.includes(normalized) ? normalized : 'Thạc sĩ';
+  };
+
+  const importLecturers = async (lecturers) => {
+    try {
+      setLoading(true);
+      
+      // Generate lecturer codes
+      const response = await axios.get('/api/giangvien/codes');
+      const existingCodes = response.data || [];
+      
+      // Generate unique codes for all lecturers first
+      for (let lecturer of lecturers) {
+        const prefix = "GV";
+        let counter = 1;
+        let newCode;
+        
+        do {
+          newCode = `${prefix}${counter.toString().padStart(3, '0')}`;
+          counter++;
+        } while (existingCodes.includes(newCode));
+        
+        lecturer.maGiangVien = newCode;
+        existingCodes.push(newCode); // Add to existing to avoid duplicates
+      }
+
+      // Import lecturers one by one since batch endpoint may not be available
+      let successCount = 0;
+      for (const lecturer of lecturers) {
+        try {
+          await axios.post('/api/giangvien', {
+            ...lecturer,
+            trangThai: 1
+          });
+          successCount++;
+        } catch (err) {
+          console.error('Error importing lecturer:', lecturer, err);
+          // Continue with next lecturer even if one fails
+        }
+      }
+
+      if (successCount > 0) {
+        Modal.success({
+          title: 'Import thành công',
+          content: `Đã thêm ${successCount} giảng viên vào hệ thống.`
+        });
+        setIsImportModalVisible(false);
+        fetchLecturers(); // Refresh list
+      } else {
+        throw new Error('Không thể import bất kỳ giảng viên nào');
+      }
+    } catch (error) {
+      console.error('Error importing lecturers:', error);
+      Modal.error({
+        title: 'Lỗi import',
+        content: error.response?.data?.message || 'Không thể import giảng viên. Vui lòng thử lại sau.'
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   return (
     <Card>
@@ -618,8 +744,13 @@ const ManageLecturer = () => {
           >
             Thêm giảng viên
           </Button>
+          <Button
+            icon={<UploadOutlined />}
+            onClick={() => setIsImportModalVisible(true)}
+          >
+            Import Excel
+          </Button>
           <Button 
-            type="default"
             icon={<BarChartOutlined />}
             onClick={calculateStats}
           >
@@ -644,7 +775,7 @@ const ManageLecturer = () => {
         />
       </div>
       
-      <style jsx global>{`
+      <style>{`
         .table-container {
           width: 100%;
           overflow-x: auto;
@@ -658,6 +789,11 @@ const ManageLecturer = () => {
         .action-buttons {
           display: flex;
           flex-wrap: nowrap;
+          gap: 6px;
+        }
+        .action-buttons .ant-btn {
+          min-width: initial;
+          padding: 0 8px;
         }
       `}</style>
 
@@ -751,6 +887,39 @@ const ManageLecturer = () => {
       >
         {renderForm()}
       </Modal>
+
+      <Modal
+        title="Import danh sách giảng viên"
+        open={isImportModalVisible}
+        onCancel={() => setIsImportModalVisible(false)}
+        footer={null}
+      >
+        <div style={{ marginBottom: 16 }}>
+          <Title level={5}>Hướng dẫn:</Title>
+          <p>File Excel cần có các cột sau:</p>
+          <ul>
+            <li>họ tên (bắt buộc)</li>
+            <li>bộ môn (bắt buộc)</li>
+            <li>khoa (bắt buộc)</li>
+            <li>trình độ (bắt buộc, chấp nhận: Thạc sĩ, Tiến sĩ, Phó Giáo sư, Giáo sư)</li>
+            <li>chuyên môn (bắt buộc)</li>
+          </ul>
+        </div>
+        
+        <Upload.Dragger
+          accept=".xlsx,.xls"
+          beforeUpload={handleImport}
+          showUploadList={false}
+        >
+          <p className="ant-upload-drag-icon">
+            <UploadOutlined />
+          </p>
+          <p className="ant-upload-text">Nhấp chuột hoặc kéo thả file vào đây</p>
+          <p className="ant-upload-hint">
+            Chỉ hỗ trợ file Excel (.xlsx, .xls)
+          </p>
+        </Upload.Dragger>
+      </Modal>
     </Card>
   );
 };
@@ -768,4 +937,4 @@ const getColorForLevel = (level) => {
   return colorMap[level] || '#bfbfbf';
 };
 
-export default ManageLecturer; 
+export default ManageLecturer;
