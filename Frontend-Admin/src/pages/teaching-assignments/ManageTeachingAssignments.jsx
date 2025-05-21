@@ -2,12 +2,17 @@ import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, InputNumber, 
   Tag, Tooltip, Badge, Divider, Row, Col } from 'antd';
 import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, 
-  ReloadOutlined, InfoCircleOutlined } from '@ant-design/icons';
+  ReloadOutlined, InfoCircleOutlined, FileExcelOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import { message } from 'antd';
+import ExcelJS from 'exceljs';
+import { saveAs } from 'file-saver';
 
 // Cấu hình baseURL cho axios
 axios.defaults.baseURL = 'http://localhost:8080';  // Thay đổi URL này thành server API của bạn
+
+// Thêm timeout để tránh chờ quá lâu
+axios.defaults.timeout = 10000; // 10 giây
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -41,6 +46,23 @@ const ManageTeachingAssignments = () => {
       
       try {
         assignmentsResponse = await axios.get('/api/phanconggiangday');
+        console.log("Dữ liệu phân công gốc:", assignmentsResponse.data);
+        
+        // Chuẩn hóa tên trường
+        if (assignmentsResponse.data.length > 0) {
+          const firstItem = assignmentsResponse.data[0];
+          // Kiểm tra cấu trúc dữ liệu
+          if (firstItem.nhom_id && !firstItem.nhomId) {
+            // Chuyển đổi snake_case sang camelCase
+            assignmentsResponse.data = assignmentsResponse.data.map(item => ({
+              id: item.id,
+              nhomId: item.nhom_id,
+              giangVienId: item.giang_vien_id,
+              vaiTro: item.vai_tro === "Giảng viên chính" ? "Phụ trách" : item.vai_tro,
+              soTiet: item.so_tiet
+            }));
+          }
+        }
       } catch (err) {
         console.warn('Không thể lấy dữ liệu phân công:', err.message);
         assignmentsResponse = { data: [] };
@@ -48,6 +70,19 @@ const ManageTeachingAssignments = () => {
       
       try {
         lecturersResponse = await axios.get('/api/giangvien');
+        // Chuẩn hóa tên trường nếu cần
+        if (lecturersResponse.data.length > 0) {
+          const firstItem = lecturersResponse.data[0];
+          if (firstItem.ma_gv && !firstItem.maGv) {
+            lecturersResponse.data = lecturersResponse.data.map(item => ({
+              id: item.id,
+              hoTen: item.ho_ten || item.ten,
+              maGv: item.ma_gv,
+              boMon: item.bo_mon,
+              khoa: item.khoa
+            }));
+          }
+        }
       } catch (err) {
         console.warn('Không thể lấy dữ liệu giảng viên:', err.message);
         lecturersResponse = { data: [] };
@@ -55,6 +90,20 @@ const ManageTeachingAssignments = () => {
       
       try {
         courseGroupsResponse = await axios.get('/api/kehoachmonhom');
+        // Chuẩn hóa tên trường nếu cần
+        if (courseGroupsResponse.data.length > 0) {
+          const firstItem = courseGroupsResponse.data[0];
+          if (firstItem.hoc_phan_id && !firstItem.hocPhanId) {
+            courseGroupsResponse.data = courseGroupsResponse.data.map(item => ({
+              id: item.id,
+              maNhom: item.ma_nhom,
+              hocPhanId: item.hoc_phan_id,
+              hocKy: item.hoc_ky,
+              namHoc: item.nam_hoc,
+              phongHoc: item.phong_hoc
+            }));
+          }
+        }
       } catch (err) {
         console.warn('Không thể lấy dữ liệu kế hoạch mở nhóm:', err.message);
         courseGroupsResponse = { data: [] };
@@ -62,13 +111,24 @@ const ManageTeachingAssignments = () => {
       
       try {
         hocPhanResponse = await axios.get('/api/hocphan');
+        // Chuẩn hóa tên trường nếu cần
+        if (hocPhanResponse.data.length > 0) {
+          const firstItem = hocPhanResponse.data[0];
+          if (firstItem.ma_hp && !firstItem.maHp) {
+            hocPhanResponse.data = hocPhanResponse.data.map(item => ({
+              id: item.id,
+              maHp: item.ma_hp,
+              tenHp: item.ten_hp
+            }));
+          }
+        }
       } catch (err) {
         console.warn('Không thể lấy dữ liệu học phần:', err.message);
         hocPhanResponse = { data: [] };
       }
       
-      console.log("Phân công:", assignmentsResponse.data);
-      console.log("Giảng viên:", lecturersResponse.data);
+      console.log("Phân công đã chuẩn hóa:", assignmentsResponse.data);
+      console.log("Giảng viên đã chuẩn hóa:", lecturersResponse.data);
       
       // Kiểm tra cấu trúc dữ liệu giảng viên để xác định tên trường chứa mã giảng viên
       if (lecturersResponse.data.length > 0) {
@@ -78,19 +138,6 @@ const ManageTeachingAssignments = () => {
       
       console.log("Nhóm học phần:", courseGroupsResponse.data);
       console.log("Học phần:", hocPhanResponse.data);
-      
-      // Chuẩn hóa dữ liệu giảng viên để đảm bảo có trường maGv
-      const normalizedLecturers = lecturersResponse.data.map(lecturer => {
-        // Tạo trường maGv từ các trường có thể có trong dữ liệu
-        const maGv = lecturer.maGv || lecturer.maGV || lecturer.magv || lecturer.ma || 
-                    lecturer.magiangvien || lecturer.magv_id || lecturer.ma_gv || 
-                    (lecturer.id ? `GV${lecturer.id}` : 'Không có mã');
-        
-        return {
-          ...lecturer,
-          maGv: maGv // Đảm bảo luôn có trường maGv
-        };
-      });
       
       // Làm giàu dữ liệu nhóm học phần với thông tin học phần
       const courseGroupsWithHocPhan = courseGroupsResponse.data.map(group => {
@@ -114,7 +161,7 @@ const ManageTeachingAssignments = () => {
       console.log("Năm học duy nhất:", uniqueNamHoc);
       
       setAssignments(assignmentsResponse.data);
-      setLecturers(normalizedLecturers);
+      setLecturers(lecturersResponse.data);
       setCourseGroups(courseGroupsWithHocPhan);
       setHocPhanList(hocPhanResponse.data);
       setFilteredGroups(courseGroupsWithHocPhan);
@@ -145,6 +192,12 @@ const ManageTeachingAssignments = () => {
 
   // Filter data based on search text
   const filteredData = () => {
+    // Đảm bảo chúng ta có dữ liệu
+    if (!assignments || assignments.length === 0) {
+      console.log("Không có dữ liệu phân công");
+      return [];
+    }
+    
     if (!searchText) {
       return assignments.map(assignment => {
         // Enrich assignment data with lecturer and course group details
@@ -164,7 +217,13 @@ const ManageTeachingAssignments = () => {
           maHocPhan = courseGroup.hocPhan.maHp;
         } else if (courseGroup.hocPhanId) {
           // Nếu là ID học phần, tìm trong danh sách học phần (nếu có)
-          tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+          const hocPhan = hocPhanList.find(hp => hp.id === courseGroup.hocPhanId);
+          if (hocPhan) {
+            tenHocPhan = hocPhan.tenHp;
+            maHocPhan = hocPhan.maHp;
+          } else {
+            tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+          }
         } else if (courseGroup.tenHocPhan) {
           // Nếu có thông tin học phần trực tiếp
           tenHocPhan = courseGroup.tenHocPhan;
@@ -177,8 +236,15 @@ const ManageTeachingAssignments = () => {
           ? parseInt(courseGroup.namHoc.split('-')[0]) >= currentYear
           : true;
 
+        // Chuẩn hóa vai trò
+        let vaiTro = assignment.vaiTro;
+        if (vaiTro === "Giảng viên chính") {
+          vaiTro = "Phụ trách";
+        }
+
         return {
           ...assignment,
+          vaiTro: vaiTro,
           tenGiangVien: lecturer.hoTen,
           boMon: lecturer.boMon,
           khoa: lecturer.khoa,
@@ -209,7 +275,13 @@ const ManageTeachingAssignments = () => {
           maHocPhan = courseGroup.hocPhan.maHp;
         } else if (courseGroup.hocPhanId) {
           // Nếu là ID học phần, tìm trong danh sách học phần (nếu có)
-          tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+          const hocPhan = hocPhanList.find(hp => hp.id === courseGroup.hocPhanId);
+          if (hocPhan) {
+            tenHocPhan = hocPhan.tenHp;
+            maHocPhan = hocPhan.maHp;
+          } else {
+            tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+          }
         } else if (courseGroup.tenHocPhan) {
           // Nếu có thông tin học phần trực tiếp
           tenHocPhan = courseGroup.tenHocPhan;
@@ -222,8 +294,15 @@ const ManageTeachingAssignments = () => {
           ? parseInt(courseGroup.namHoc.split('-')[0]) >= currentYear
           : true;
         
+        // Chuẩn hóa vai trò
+        let vaiTro = assignment.vaiTro;
+        if (vaiTro === "Giảng viên chính") {
+          vaiTro = "Phụ trách";
+        }
+        
         return {
           ...assignment,
+          vaiTro: vaiTro,
           tenGiangVien: lecturer.hoTen,
           boMon: lecturer.boMon,
           khoa: lecturer.khoa,
@@ -295,16 +374,12 @@ const ManageTeachingAssignments = () => {
         setLoading(true);
         try {
           console.log("Bắt đầu gọi API xóa phân công ID:", id);
-          try {
-            await axios.delete(`/api/phanconggiangday/${id}`);
-            console.log("Đã xóa phân công trên API thành công");
-          } catch (apiError) {
-            console.warn("Lỗi khi gọi API xóa:", apiError.message);
-            console.log("Đang chạy trong chế độ phát triển, tiếp tục xử lý");
-            // Trong chế độ phát triển, vẫn tiếp tục mặc dù API lỗi
-          }
           
-          // Cập nhật state local
+          // Gọi API để xóa phân công
+          await axios.delete(`/api/phanconggiangday/${id}`);
+          console.log("Đã xóa phân công trên API thành công");
+          
+          // Chỉ cập nhật state local sau khi API thành công
           const updatedAssignments = assignments.filter(assignment => assignment.id !== id);
           console.log("Số lượng phân công sau khi xóa:", updatedAssignments.length);
           setAssignments(updatedAssignments);
@@ -315,14 +390,10 @@ const ManageTeachingAssignments = () => {
             filterCourseGroups(selectedHocKy, selectedNamHoc, selectedMonHoc);
           }
           
-          Modal.success({
-            content: 'Xóa phân công giảng dạy thành công'
-          });
+          message.success('Xóa phân công giảng dạy thành công');
         } catch (error) {
           console.error('Lỗi khi xóa phân công:', error);
-          Modal.error({
-            content: `Có lỗi xảy ra khi xóa phân công giảng dạy: ${error.message}`
-          });
+          message.error(`Không thể xóa phân công từ cơ sở dữ liệu: ${error.message}`);
         } finally {
           setLoading(false);
         }
@@ -346,120 +417,101 @@ const ManageTeachingAssignments = () => {
         return;
       }
       
+      // Kiểm tra xem nhóm học phần đã có giảng viên phụ trách chưa
+      const selectedGroup = filteredGroups.find(g => g.id === values.nhomId);
+      if (!editingId && selectedGroup && selectedGroup.isAssigned && values.vaiTro === 'Phụ trách') {
+        // Nếu đã có giảng viên phụ trách và đang thêm mới với vai trò phụ trách
+        const assignment = selectedGroup.assignmentInfo;
+        const lecturer = lecturers.find(l => l.id === assignment?.giangVienId);
+        
+        Modal.error({
+          title: 'Không thể thêm mới',
+          content: (
+            <div>
+              <p>Nhóm học phần này đã được phân công cho giảng viên phụ trách:</p>
+              <p><strong>Giảng viên:</strong> {lecturer?.hoTen || 'Không xác định'}</p>
+              <p>Mỗi nhóm học phần chỉ có thể có một giảng viên với vai trò "Phụ trách".</p>
+              <p>Vui lòng chọn vai trò khác (Trợ giảng, Giảng viên thỉnh giảng) hoặc chọn nhóm học phần khác.</p>
+            </div>
+          )
+        });
+        setLoading(false);
+        return;
+      }
+      
       // Tạo đối tượng dữ liệu phân công
-      const assignmentData = {
+      let assignmentData = {
         nhomId: values.nhomId,
         giangVienId: values.giangVienId,
         vaiTro: values.vaiTro,
         soTiet: values.soTiet
       };
 
-      console.log("Dữ liệu phân công:", assignmentData);
+      // Kiểm tra nếu cần chuyển đổi sang snake_case
+      const firstAssignment = assignments[0];
+      if (firstAssignment && 'nhom_id' in firstAssignment) {
+        // Chuyển đổi sang snake_case
+        assignmentData = {
+          nhom_id: values.nhomId,
+          giang_vien_id: values.giangVienId,
+          vai_tro: values.vaiTro,
+          so_tiet: values.soTiet
+        };
+      }
 
+      console.log("Dữ liệu phân công sẽ gửi lên server:", assignmentData);
+
+      let apiResponse;
+      
       if (editingId) {
         // Cập nhật phân công đã tồn tại
         console.log("Đang cập nhật phân công ID:", editingId);
-        try {
-          await axios.put(`/api/phanconggiangday/${editingId}`, assignmentData);
-          
-          // Cập nhật trên state
-          const updatedAssignments = assignments.map(assignment => {
-            if (assignment.id === editingId) {
-              return { ...assignment, ...assignmentData };
-            }
-            return assignment;
-          });
-          
-          setAssignments(updatedAssignments);
-          Modal.success({
-            content: 'Cập nhật phân công giảng dạy thành công'
-          });
-          setIsModalVisible(false);
-          form.resetFields();
-        } catch (apiError) {
-          console.error('Lỗi khi gọi API cập nhật:', apiError);
-          // Thêm xử lý cho môi trường phát triển
-          if (process.env.NODE_ENV === 'development') {
-            // Giả lập cập nhật thành công trong môi trường phát triển
-            const updatedAssignments = assignments.map(assignment => {
-              if (assignment.id === editingId) {
-                return { ...assignment, ...assignmentData };
-              }
-              return assignment;
-            });
-            
-            setAssignments(updatedAssignments);
-            Modal.success({
-              content: 'Cập nhật phân công giảng dạy thành công (chế độ phát triển)'
-            });
-            setIsModalVisible(false);
-            form.resetFields();
-          } else {
-            // Trong môi trường production, hiển thị lỗi
-            Modal.error({
-              title: 'Lỗi cập nhật',
-              content: 'Không thể cập nhật phân công. Vui lòng thử lại sau.'
-            });
+        apiResponse = await axios.put(`/api/phanconggiangday/${editingId}`, assignmentData);
+        console.log("Kết quả cập nhật từ API:", apiResponse.data);
+        
+        // Cập nhật trên state
+        const updatedAssignments = assignments.map(assignment => {
+          if (assignment.id === editingId) {
+            return { ...assignment, ...assignmentData, id: editingId };
           }
-        }
+          return assignment;
+        });
+        
+        setAssignments(updatedAssignments);
+        message.success('Cập nhật phân công giảng dạy thành công');
       } else {
         // Tạo phân công mới
         console.log("Đang tạo phân công mới");
-        try {
-          const response = await axios.post('/api/phanconggiangday', assignmentData);
-          console.log("Kết quả từ API:", response.data);
-          const newAssignment = response.data;
-          
-          setAssignments([...assignments, newAssignment]);
-          Modal.success({
-            content: 'Thêm phân công giảng dạy mới thành công'
-          });
-          setIsModalVisible(false);
-          form.resetFields();
-        } catch (apiError) {
-          console.error('Lỗi khi gọi API tạo mới:', apiError);
-          
-          // Kiểm tra lỗi cụ thể để hiển thị thông báo phù hợp
-          let errorMessage = 'Không thể thêm phân công mới.';
-          
-          if (apiError.response) {
-            // Có phản hồi từ server
-            if (apiError.response.status === 409) {
-              errorMessage = 'Nhóm học phần này đã được phân công giảng viên phụ trách.';
-            } else if (apiError.response.data && apiError.response.data.message) {
-              errorMessage = apiError.response.data.message;
-            }
-          }
-          
-          // Trong môi trường phát triển, vẫn tiếp tục
-          if (process.env.NODE_ENV === 'development') {
-            // Giả lập tạo mới thành công
-            const newId = Math.max(...assignments.map(a => a.id || 0), 0) + 1;
-            const newAssignment = {
-              id: newId,
-              ...assignmentData
-            };
-            
-            setAssignments([...assignments, newAssignment]);
-            Modal.success({
-              content: 'Thêm phân công giảng dạy mới thành công (chế độ phát triển)'
-            });
-            setIsModalVisible(false);
-            form.resetFields();
-          } else {
-            // Trong môi trường production, hiển thị lỗi
-            Modal.error({
-              title: 'Lỗi thêm mới',
-              content: errorMessage
-            });
-          }
-        }
+        apiResponse = await axios.post('/api/phanconggiangday', assignmentData);
+        console.log("Kết quả từ API:", apiResponse.data);
+        
+        // Lấy thông tin phân công mới từ API response
+        const newAssignment = apiResponse.data;
+        
+        // Thêm vào state
+        setAssignments([...assignments, newAssignment]);
+        message.success('Thêm phân công giảng dạy mới thành công');
       }
+      
+      // Đóng form và reset
+      setIsModalVisible(false);
+      form.resetFields();
     } catch (error) {
       console.error('Lỗi khi gửi form:', error);
+      
+      let errorMessage = 'Có lỗi xảy ra trong quá trình lưu dữ liệu.';
+      
+      if (error.response) {
+        if (error.response.status === 409) {
+          errorMessage = 'Nhóm học phần này đã được phân công giảng viên phụ trách.';
+        } else if (error.response.data && error.response.data.message) {
+          errorMessage = error.response.data.message;
+        }
+      }
+      
       Modal.error({
-        title: 'Lỗi xử lý',
-        content: 'Có lỗi xảy ra trong quá trình xử lý. Vui lòng thử lại sau.'
+        title: editingId ? 'Lỗi cập nhật' : 'Lỗi thêm mới',
+        content: errorMessage
       });
     } finally {
       setLoading(false);
@@ -489,15 +541,22 @@ const ManageTeachingAssignments = () => {
       }
     });
     
-    // Loại bỏ các nhóm đã có phân công với vai trò "Phụ trách"
+    // Lấy danh sách các nhóm đã có phân công với vai trò "Phụ trách" hoặc "Giảng viên chính"
     const assignedGroupIds = assignments
-      .filter(assignment => assignment.vaiTro === "Phụ trách")
+      .filter(assignment => 
+        assignment.vaiTro === "Phụ trách" || 
+        assignment.vaiTro === "Giảng viên chính"
+      )
       .map(assignment => assignment.nhomId);
     
     console.log("Danh sách nhóm đã phân công giảng viên phụ trách:", assignedGroupIds);
     
-    // Lọc ra các nhóm chưa phân công
-    filtered = filtered.filter(group => !assignedGroupIds.includes(group.id));
+    // Đánh dấu các nhóm đã phân công thay vì loại bỏ chúng
+    filtered = filtered.map(group => ({
+      ...group,
+      isAssigned: assignedGroupIds.includes(group.id),
+      assignmentInfo: assignments.find(a => a.nhomId === group.id && a.vaiTro === "Phụ trách")
+    }));
     
     // Lọc theo học kỳ
     if (hocKy !== null) {
@@ -524,12 +583,19 @@ const ManageTeachingAssignments = () => {
     if (filtered.length === 0) {
       form.setFieldsValue({ nhomId: undefined });
       message.info("Không tìm thấy nhóm học phần phù hợp với điều kiện lọc");
-    } else if (filtered.length === 1) {
-      // Tự động chọn nhóm nếu chỉ có 1 kết quả
+    } else if (filtered.length === 1 && !filtered[0].isAssigned) {
+      // Tự động chọn nhóm nếu chỉ có 1 kết quả và chưa được phân công
       form.setFieldsValue({ nhomId: filtered[0].id });
       message.success(`Đã tìm thấy 1 nhóm học phần: ${filtered[0].maNhom || 'Không mã'}`);
     } else {
-      message.success(`Đã tìm thấy ${filtered.length} nhóm học phần`);
+      const availableCount = filtered.filter(group => !group.isAssigned).length;
+      const assignedCount = filtered.length - availableCount;
+      
+      if (availableCount > 0) {
+        message.success(`Đã tìm thấy ${filtered.length} nhóm học phần (${availableCount} chưa phân công, ${assignedCount} đã phân công)`);
+      } else if (assignedCount > 0) {
+        message.warning(`Tìm thấy ${assignedCount} nhóm học phần đã được phân công giảng viên phụ trách`);
+      }
     }
   };
   
@@ -602,6 +668,251 @@ const ManageTeachingAssignments = () => {
     }
   }, [lecturers, courseGroups, hocPhanList]);
 
+  // Thêm hàm xuất Excel
+  const exportToExcel = async () => {
+    setLoading(true);
+
+    try {
+      // Tạo workbook mới
+      const workbook = new ExcelJS.Workbook();
+      const worksheet = workbook.addWorksheet('Phân công giảng dạy');
+
+      // Thêm tiêu đề
+      worksheet.mergeCells('A1:N1');
+      const titleCell = worksheet.getCell('A1');
+      titleCell.value = 'PHÂN CÔNG GIẢNG DẠY';
+      titleCell.font = { size: 16, bold: true };
+      titleCell.alignment = { horizontal: 'center' };
+      
+      // Thiết lập header cho bảng
+      const headers = [
+        'STT', 'Mã HP', 'Tên học phần', 'Số TC', 'Khóa', 
+        'LT', 'BT', 'TH', 'TC', 'Hệ số HP', 'Tổng Số nhóm', 'SLSV/Nhóm', 
+        'Nhóm', 'Mã CBGD', 'Họ và tên CBGD', 'Số tiết thực hiện', 'Số tiết thực tế'
+      ];
+      
+      // Header chính
+      worksheet.mergeCells('A3:A4');
+      worksheet.mergeCells('B3:B4');
+      worksheet.mergeCells('C3:C4');
+      worksheet.mergeCells('D3:D4');
+      worksheet.mergeCells('E3:E4');
+      worksheet.mergeCells('F3:I3');
+      worksheet.mergeCells('J3:J4');
+      worksheet.mergeCells('K3:K4');
+      worksheet.mergeCells('L3:L4');
+      worksheet.mergeCells('M3:M4');
+      worksheet.mergeCells('N3:N4');
+      worksheet.mergeCells('O3:O4');
+      worksheet.mergeCells('P3:P4');
+      worksheet.mergeCells('Q3:Q4');
+      
+      worksheet.getCell('A3').value = 'STT';
+      worksheet.getCell('B3').value = 'Mã HP';
+      worksheet.getCell('C3').value = 'Tên học phần';
+      worksheet.getCell('D3').value = 'Số TC';
+      worksheet.getCell('E3').value = 'Khóa';
+      worksheet.getCell('F3').value = 'Số tiết';
+      worksheet.getCell('J3').value = 'Hệ số HP';
+      worksheet.getCell('K3').value = 'Tổng Số nhóm';
+      worksheet.getCell('L3').value = 'SLSV/Nhóm';
+      worksheet.getCell('M3').value = 'Nhóm';
+      worksheet.getCell('N3').value = 'Mã CBGD';
+      worksheet.getCell('O3').value = 'Họ và tên CBGD';
+      worksheet.getCell('P3').value = 'Số tiết thực hiện';
+      worksheet.getCell('Q3').value = 'Số tiết thực tế';
+      
+      // Sub-header cho cột "Số tiết"
+      worksheet.getCell('F4').value = 'LT';
+      worksheet.getCell('G4').value = 'BT';
+      worksheet.getCell('H4').value = 'TH';
+      worksheet.getCell('I4').value = 'TC';
+      
+      // Áp dụng style cho header
+      ['A3', 'B3', 'C3', 'D3', 'E3', 'F3', 'J3', 'K3', 'L3', 'M3', 'N3', 'O3', 'P3', 'Q3', 
+       'F4', 'G4', 'H4', 'I4'].forEach(cell => {
+        worksheet.getCell(cell).font = { bold: true };
+        worksheet.getCell(cell).alignment = { horizontal: 'center', vertical: 'middle' };
+        worksheet.getCell(cell).fill = {
+          type: 'pattern',
+          pattern: 'solid',
+          fgColor: { argb: 'FFD3D3D3' }
+        };
+        worksheet.getCell(cell).border = {
+          top: { style: 'thin' },
+          left: { style: 'thin' },
+          bottom: { style: 'thin' },
+          right: { style: 'thin' }
+        };
+      });
+
+      // Thiết lập độ rộng cột
+      worksheet.getColumn('A').width = 5;  // STT
+      worksheet.getColumn('B').width = 10; // Mã HP
+      worksheet.getColumn('C').width = 30; // Tên học phần
+      worksheet.getColumn('D').width = 8;  // Số TC
+      worksheet.getColumn('E').width = 20; // Khóa
+      worksheet.getColumn('F').width = 8;  // LT
+      worksheet.getColumn('G').width = 8;  // BT
+      worksheet.getColumn('H').width = 8;  // TH
+      worksheet.getColumn('I').width = 8;  // TC
+      worksheet.getColumn('J').width = 10; // Hệ số HP
+      worksheet.getColumn('K').width = 10; // Tổng Số nhóm
+      worksheet.getColumn('L').width = 12; // SLSV/Nhóm
+      worksheet.getColumn('M').width = 8;  // Nhóm
+      worksheet.getColumn('N').width = 12; // Mã CBGD
+      worksheet.getColumn('O').width = 25; // Họ và tên CBGD
+      worksheet.getColumn('P').width = 15; // Số tiết thực hiện
+      worksheet.getColumn('Q').width = 12; // Số tiết thực tế
+
+      // Lấy dữ liệu đã được xử lý
+      const data = filteredData();
+
+      // Nhóm dữ liệu theo học phần
+      const groupedByHocPhan = {};
+      data.forEach(item => {
+        const courseGroup = courseGroups.find(g => g.id === item.nhomId) || {};
+        const hocPhan = courseGroup.hocPhan || {};
+        const maHocPhan = item.maHocPhan || hocPhan.maHp || '';
+        
+        if (!groupedByHocPhan[maHocPhan]) {
+          groupedByHocPhan[maHocPhan] = {
+            maHocPhan: maHocPhan,
+            tenHocPhan: item.tenHocPhan || hocPhan.tenHp || '',
+            soTC: hocPhan.soTc || 3, // Mặc định nếu không có
+            khoa: 'CNTT + KTPM+TTNT', // Lấy từ API trong thực tế
+            soTietLT: 45,
+            soTietBT: 0,
+            soTietTH: 30,
+            soTietTC: 75,
+            heSoHP: 0.8,
+            tongSoNhom: 0,
+            slsvNhom: 30,
+            assignments: []
+          };
+        }
+        
+        // Thêm phân công giảng dạy vào học phần
+        groupedByHocPhan[maHocPhan].assignments.push({
+          ...item,
+          nhom: courseGroup.maNhom || '',
+          maCBGD: lecturers.find(l => l.id === item.giangVienId)?.maGv || '',
+          tenCBGD: item.tenGiangVien || '',
+          soTietThucHien: item.soTiet || 0,
+          soTietThucTe: item.soTiet || 0 // Mặc định bằng số tiết thực hiện
+        });
+        
+        // Cập nhật số nhóm
+        groupedByHocPhan[maHocPhan].tongSoNhom = groupedByHocPhan[maHocPhan].assignments.length;
+      });
+
+      // Thêm dữ liệu vào worksheet
+      let rowIndex = 5;
+      let stt = 1;
+      
+      // Duyệt qua từng học phần và thêm dữ liệu
+      Object.values(groupedByHocPhan).forEach(hocPhan => {
+        const firstRow = rowIndex;
+        const lastRow = rowIndex + hocPhan.assignments.length - 1;
+        
+        // Merge các cột cho thông tin học phần
+        if (hocPhan.assignments.length > 1) {
+          worksheet.mergeCells(`A${firstRow}:A${lastRow}`);
+          worksheet.mergeCells(`B${firstRow}:B${lastRow}`);
+          worksheet.mergeCells(`C${firstRow}:C${lastRow}`);
+          worksheet.mergeCells(`D${firstRow}:D${lastRow}`);
+          worksheet.mergeCells(`E${firstRow}:E${lastRow}`);
+          worksheet.mergeCells(`F${firstRow}:F${lastRow}`);
+          worksheet.mergeCells(`G${firstRow}:G${lastRow}`);
+          worksheet.mergeCells(`H${firstRow}:H${lastRow}`);
+          worksheet.mergeCells(`I${firstRow}:I${lastRow}`);
+          worksheet.mergeCells(`J${firstRow}:J${lastRow}`);
+          worksheet.mergeCells(`K${firstRow}:K${lastRow}`);
+          worksheet.mergeCells(`L${firstRow}:L${lastRow}`);
+        }
+        
+        // Thông tin học phần
+        worksheet.getCell(`A${firstRow}`).value = stt++;
+        worksheet.getCell(`B${firstRow}`).value = hocPhan.maHocPhan;
+        worksheet.getCell(`C${firstRow}`).value = hocPhan.tenHocPhan;
+        worksheet.getCell(`D${firstRow}`).value = hocPhan.soTC;
+        worksheet.getCell(`E${firstRow}`).value = hocPhan.khoa;
+        worksheet.getCell(`F${firstRow}`).value = hocPhan.soTietLT;
+        worksheet.getCell(`G${firstRow}`).value = hocPhan.soTietBT;
+        worksheet.getCell(`H${firstRow}`).value = hocPhan.soTietTH;
+        worksheet.getCell(`I${firstRow}`).value = hocPhan.soTietTC;
+        worksheet.getCell(`J${firstRow}`).value = hocPhan.heSoHP;
+        worksheet.getCell(`K${firstRow}`).value = hocPhan.tongSoNhom;
+        worksheet.getCell(`L${firstRow}`).value = hocPhan.slsvNhom;
+        
+        // Tạo border cho các cột đã merge
+        if (hocPhan.assignments.length > 1) {
+          [`A${firstRow}`, `B${firstRow}`, `C${firstRow}`, `D${firstRow}`, `E${firstRow}`, 
+           `F${firstRow}`, `G${firstRow}`, `H${firstRow}`, `I${firstRow}`, `J${firstRow}`, 
+           `K${firstRow}`, `L${firstRow}`].forEach(cell => {
+            worksheet.getCell(cell).border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+            worksheet.getCell(cell).alignment = { vertical: 'middle', horizontal: 'center' };
+          });
+        }
+        
+        // Thông tin phân công cho từng giảng viên
+        hocPhan.assignments.forEach((assignment, index) => {
+          const currentRow = firstRow + index;
+          
+          worksheet.getCell(`M${currentRow}`).value = assignment.nhom;
+          worksheet.getCell(`N${currentRow}`).value = assignment.maCBGD;
+          worksheet.getCell(`O${currentRow}`).value = assignment.tenCBGD;
+          worksheet.getCell(`P${currentRow}`).value = assignment.soTietThucHien;
+          worksheet.getCell(`Q${currentRow}`).value = assignment.soTietThucTe;
+          
+          // Tạo border cho từng cell
+          [`A${currentRow}`, `B${currentRow}`, `C${currentRow}`, `D${currentRow}`, 
+           `E${currentRow}`, `F${currentRow}`, `G${currentRow}`, `H${currentRow}`, 
+           `I${currentRow}`, `J${currentRow}`, `K${currentRow}`, `L${currentRow}`, 
+           `M${currentRow}`, `N${currentRow}`, `O${currentRow}`, `P${currentRow}`, 
+           `Q${currentRow}`].forEach(cell => {
+            worksheet.getCell(cell).border = {
+              top: { style: 'thin' },
+              left: { style: 'thin' },
+              bottom: { style: 'thin' },
+              right: { style: 'thin' }
+            };
+            worksheet.getCell(cell).alignment = { vertical: 'middle' };
+          });
+          
+          // Căn giữa cho một số cột
+          [`A${currentRow}`, `B${currentRow}`, `D${currentRow}`, `F${currentRow}`, 
+           `G${currentRow}`, `H${currentRow}`, `I${currentRow}`, `J${currentRow}`, 
+           `K${currentRow}`, `L${currentRow}`, `M${currentRow}`, `P${currentRow}`, 
+           `Q${currentRow}`].forEach(cell => {
+            worksheet.getCell(cell).alignment.horizontal = 'center';
+          });
+        });
+        
+        rowIndex += hocPhan.assignments.length;
+      });
+
+      // Tạo buffer để lưu file
+      const buffer = await workbook.xlsx.writeBuffer();
+      
+      // Tạo blob và lưu file
+      const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
+      saveAs(blob, `PhanCongGiangDay_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.xlsx`);
+      
+      message.success('Xuất Excel thành công!');
+    } catch (error) {
+      console.error('Lỗi khi xuất Excel:', error);
+      message.error('Có lỗi xảy ra khi xuất file Excel. Vui lòng thử lại!');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Table columns
   const columns = [
     {
@@ -640,14 +951,17 @@ const ManageTeachingAssignments = () => {
       key: 'vaiTro',
       render: (vaiTro) => {
         let color = 'blue';
-        if (vaiTro === 'Phụ trách') {
+        // Chuẩn hóa giá trị vai trò
+        let displayVaiTro = vaiTro;
+        if (vaiTro === 'Phụ trách' || vaiTro === 'Giảng viên chính') {
           color = 'green';
+          displayVaiTro = 'Phụ trách';
         } else if (vaiTro === 'Trợ giảng') {
           color = 'orange';
         } else if (vaiTro === 'Giảng viên thỉnh giảng') {
           color = 'purple';
         }
-        return <Tag color={color}>{vaiTro}</Tag>;
+        return <Tag color={color}>{displayVaiTro}</Tag>;
       },
     },
     {
@@ -846,11 +1160,20 @@ const ManageTeachingAssignments = () => {
           >
             Thêm phân công
           </Button>
-          <Button 
+          <Button
             icon={<ReloadOutlined />}
             onClick={fetchData}
           >
             Làm mới
+          </Button>
+          <Button
+            type="primary"
+            icon={<FileExcelOutlined />}
+            onClick={exportToExcel}
+            style={{ background: '#52c41a', borderColor: '#52c41a' }}
+            loading={loading}
+          >
+            Xuất Excel
           </Button>
         </Space>
       </div>
@@ -1003,12 +1326,59 @@ const ManageTeachingAssignments = () => {
                 option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
               }
               disabled={editingId !== null}
+              optionLabelProp="label"
+              onChange={(value) => {
+                const selectedGroup = filteredGroups.find(g => g.id === value);
+                if (selectedGroup && selectedGroup.isAssigned) {
+                  const assignment = selectedGroup.assignmentInfo;
+                  const lecturer = lecturers.find(l => l.id === assignment?.giangVienId);
+                  
+                  Modal.warning({
+                    title: 'Nhóm học phần đã có giảng viên phụ trách',
+                    content: (
+                      <div>
+                        <p>Nhóm học phần này đã được phân công cho giảng viên phụ trách:</p>
+                        <p><strong>Giảng viên:</strong> {lecturer?.hoTen || 'Không xác định'}</p>
+                        <p><strong>Vai trò:</strong> {assignment?.vaiTro || 'Phụ trách'}</p>
+                        <p>Nếu tiếp tục, bạn sẽ thêm một giảng viên khác cho nhóm này.</p>
+                      </div>
+                    ),
+                  });
+                }
+              }}
             >
-              {filteredGroups.map(group => (
-                <Option key={group.id} value={group.id}>
-                  {group.maNhom} - {group.hocPhan ? group.hocPhan.tenHp : 'Không xác định'}
-                </Option>
-              ))}
+              {filteredGroups.map(group => {
+                const isAssigned = group.isAssigned;
+                const assignmentInfo = group.assignmentInfo;
+                const lecturer = lecturers.find(l => l.id === assignmentInfo?.giangVienId);
+                
+                // Tìm thông tin học phần
+                const hocPhanName = group.hocPhan ? group.hocPhan.tenHp : 'Không xác định';
+                
+                // Tạo nội dung hiển thị
+                const displayText = `${group.maNhom} - ${hocPhanName}`;
+                
+                // Thêm thông tin giảng viên nếu đã phân công
+                const assignedText = isAssigned 
+                  ? `[Đã phân công: ${lecturer?.hoTen || 'Không xác định'}]` 
+                  : '';
+                
+                return (
+                  <Option 
+                    key={group.id} 
+                    value={group.id}
+                    label={displayText}
+                    disabled={isAssigned && form.getFieldValue('vaiTro') === 'Phụ trách'}
+                  >
+                    <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                      <span>{displayText}</span>
+                      {isAssigned && (
+                        <Tag color="red">{assignedText}</Tag>
+                      )}
+                    </div>
+                  </Option>
+                );
+              })}
             </Select>
           </Form.Item>
           
@@ -1038,7 +1408,36 @@ const ManageTeachingAssignments = () => {
             rules={[{ required: true, message: 'Vui lòng chọn vai trò' }]}
             initialValue="Phụ trách"
           >
-            <Select placeholder="Chọn vai trò">
+            <Select 
+              placeholder="Chọn vai trò"
+              onChange={(value) => {
+                // Kiểm tra khi đổi vai trò
+                const nhomId = form.getFieldValue('nhomId');
+                if (nhomId) {
+                  const selectedGroup = filteredGroups.find(g => g.id === nhomId);
+                  if (selectedGroup && selectedGroup.isAssigned && 
+                     (value === 'Phụ trách' || value === 'Giảng viên chính')) {
+                    // Nếu đã có giảng viên phụ trách và đang chọn vai trò phụ trách
+                    const assignment = selectedGroup.assignmentInfo;
+                    const lecturer = lecturers.find(l => l.id === assignment?.giangVienId);
+                    
+                    Modal.warning({
+                      title: 'Cảnh báo vai trò trùng lặp',
+                      content: (
+                        <div>
+                          <p>Nhóm học phần này đã được phân công cho giảng viên phụ trách:</p>
+                          <p><strong>Giảng viên:</strong> {lecturer?.hoTen || 'Không xác định'}</p>
+                          <p>Mỗi nhóm học phần chỉ có thể có một giảng viên với vai trò "Phụ trách".</p>
+                          <p>Vui lòng chọn vai trò khác (Trợ giảng, Giảng viên thỉnh giảng) hoặc chọn nhóm học phần khác.</p>
+                        </div>
+                      )
+                    });
+                    // Đặt lại giá trị vai trò
+                    form.setFieldsValue({ vaiTro: 'Trợ giảng' });
+                  }
+                }
+              }}
+            >
               <Option value="Phụ trách">Phụ trách</Option>
               <Option value="Trợ giảng">Trợ giảng</Option>
               <Option value="Giảng viên thỉnh giảng">Giảng viên thỉnh giảng</Option>
