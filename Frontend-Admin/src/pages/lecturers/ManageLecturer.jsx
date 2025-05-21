@@ -1,9 +1,10 @@
 // ManageLecturer.jsx - Trang quản lý giảng viên
 import React, { useState, useEffect } from 'react';
 import { Table, Button, Space, Typography, Input, Card, Modal, Form, Select, Tooltip, message, Row, Col, Statistic, Divider, List, Badge, Upload } from 'antd';
-import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, PieChartOutlined, UploadOutlined } from '@ant-design/icons';
+import { SearchOutlined, PlusOutlined, EditOutlined, DeleteOutlined, BarChartOutlined, PieChartOutlined, UploadOutlined, DownloadOutlined } from '@ant-design/icons';
 import axios from 'axios';
 import * as XLSX from 'xlsx';
+import { saveAs } from 'file-saver';
 
 const { Title } = Typography;
 const { Option } = Select;
@@ -656,12 +657,35 @@ const ManageLecturer = () => {
     try {
       setLoading(true);
       
-      // Generate lecturer codes
+      // Lấy tất cả giảng viên (bao gồm cả inactive) để kiểm tra trùng lặp
+      const allLecturersRes = await axios.get('/api/giangvien/all');
+      const allLecturers = allLecturersRes.data || [];
+      
+      // Lấy mã giảng viên hiện có
       const response = await axios.get('/api/giangvien/codes');
       const existingCodes = response.data || [];
       
-      // Generate unique codes for all lecturers first
+      // Phân loại giảng viên: trùng lặp và hợp lệ
+      const duplicates = [];
+      const validLecturers = [];
+      
+      // Kiểm tra trùng lặp dựa vào họ tên + bộ môn + khoa
       for (let lecturer of lecturers) {
+        const isDuplicate = allLecturers.some(existingLecturer => 
+          existingLecturer.hoTen?.toLowerCase() === lecturer.hoTen?.toLowerCase() && 
+          existingLecturer.boMon?.toLowerCase() === lecturer.boMon?.toLowerCase() &&
+          existingLecturer.khoa?.toLowerCase() === lecturer.khoa?.toLowerCase()
+        );
+        
+        if (isDuplicate) {
+          duplicates.push(lecturer);
+        } else {
+          validLecturers.push(lecturer);
+        }
+      }
+      
+      // Tạo mã giảng viên cho các giảng viên hợp lệ
+      for (let lecturer of validLecturers) {
         const prefix = "GV";
         let counter = 1;
         let newCode;
@@ -672,12 +696,12 @@ const ManageLecturer = () => {
         } while (existingCodes.includes(newCode));
         
         lecturer.maGiangVien = newCode;
-        existingCodes.push(newCode); // Add to existing to avoid duplicates
+        existingCodes.push(newCode); // Thêm vào danh sách để tránh trùng lặp
       }
 
-      // Import lecturers one by one since batch endpoint may not be available
+      // Import giảng viên hợp lệ
       let successCount = 0;
-      for (const lecturer of lecturers) {
+      for (const lecturer of validLecturers) {
         try {
           await axios.post('/api/giangvien', {
             ...lecturer,
@@ -685,29 +709,98 @@ const ManageLecturer = () => {
           });
           successCount++;
         } catch (err) {
-          console.error('Error importing lecturer:', lecturer, err);
-          // Continue with next lecturer even if one fails
+          console.error('Lỗi khi import giảng viên:', lecturer, err);
+          // Tiếp tục với giảng viên tiếp theo ngay cả khi có lỗi
         }
       }
 
-      if (successCount > 0) {
+      if (successCount > 0 || duplicates.length > 0) {
         Modal.success({
-          title: 'Import thành công',
-          content: `Đã thêm ${successCount} giảng viên vào hệ thống.`
+          title: 'Kết quả import',
+          content: (
+            <div>
+              <p>Đã import thành công {successCount} giảng viên.</p>
+              <p>Đã bỏ qua {duplicates.length} giảng viên trùng lặp.</p>
+              {duplicates.length > 0 && (
+                <div>
+                  <div style={{ margin: '10px 0', borderTop: '1px solid #d9d9d9', paddingTop: '10px' }} />
+                  <p><strong>Danh sách giảng viên trùng lặp:</strong></p>
+                  <ul style={{ maxHeight: '200px', overflowY: 'auto', padding: '0 0 0 20px' }}>
+                    {duplicates.map((lecturer, index) => (
+                      <li key={index} style={{ marginBottom: '5px' }}>
+                        <span style={{ fontWeight: 'bold' }}>{lecturer.hoTen}</span> - {lecturer.boMon} - {lecturer.khoa}
+                      </li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          ),
+          width: 600
         });
         setIsImportModalVisible(false);
-        fetchLecturers(); // Refresh list
+        fetchLecturers(); // Cập nhật danh sách
       } else {
         throw new Error('Không thể import bất kỳ giảng viên nào');
       }
     } catch (error) {
-      console.error('Error importing lecturers:', error);
+      console.error('Lỗi khi import giảng viên:', error);
       Modal.error({
         title: 'Lỗi import',
         content: error.response?.data?.message || 'Không thể import giảng viên. Vui lòng thử lại sau.'
       });
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Function to export lecturers to Excel
+  const exportToExcel = () => {
+    try {
+      // Prepare data for Excel export
+      const exportData = lecturers.map(lecturer => ({
+        'Mã giảng viên': lecturer.maGiangVien || '',
+        'Họ tên': lecturer.hoTen || '',
+        'Bộ môn': lecturer.boMon || '',
+        'Khoa': lecturer.khoa || '',
+        'Trình độ': lecturer.trinhDo || '',
+        'Chuyên môn': lecturer.chuyenMon || '',
+        'Email': lecturer.user_email || lecturer.email || '',
+        'Số điện thoại': lecturer.soDienThoai || ''
+      }));
+
+      // Create worksheet
+      const worksheet = XLSX.utils.json_to_sheet(exportData);
+      
+      // Set column widths
+      const columnWidths = [
+        { wch: 15 }, // Mã giảng viên
+        { wch: 25 }, // Họ tên
+        { wch: 20 }, // Bộ môn
+        { wch: 20 }, // Khoa
+        { wch: 15 }, // Trình độ
+        { wch: 30 }, // Chuyên môn
+        { wch: 25 }, // Email
+        { wch: 15 }  // Số điện thoại
+      ];
+      
+      worksheet['!cols'] = columnWidths;
+      
+      // Create workbook
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, 'Danh sách giảng viên');
+      
+      // Generate Excel file
+      const excelBuffer = XLSX.write(workbook, { bookType: 'xlsx', type: 'array' });
+      
+      // Save file
+      const blob = new Blob([excelBuffer], { type: 'application/octet-stream' });
+      saveAs(blob, 'DanhSachGiangVien.xlsx');
+      
+      message.success('Xuất danh sách giảng viên thành công');
+    } catch (error) {
+      console.error('Error exporting to Excel:', error);
+      message.error('Không thể xuất danh sách giảng viên');
     }
   };
 
@@ -755,6 +848,12 @@ const ManageLecturer = () => {
             onClick={calculateStats}
           >
             Thống kê
+          </Button>
+          <Button 
+            icon={<DownloadOutlined />} 
+            onClick={exportToExcel}
+          >
+            Xuất Excel
           </Button>
         </Space>
       </div>
