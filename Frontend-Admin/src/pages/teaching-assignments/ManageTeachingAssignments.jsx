@@ -25,13 +25,16 @@ const ManageTeachingAssignments = () => {
   const [filteredHocPhanList, setFilteredHocPhanList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
+  const [isExportModalVisible, setIsExportModalVisible] = useState(false); // Thêm state cho modal xuất Excel
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [selectedHocKy, setSelectedHocKy] = useState(null);
   const [selectedNamHoc, setSelectedNamHoc] = useState(null);
   const [selectedMonHoc, setSelectedMonHoc] = useState(null);
+  const [selectedExportYear, setSelectedExportYear] = useState(null); // Thêm state cho năm học xuất Excel
   const [filteredGroups, setFilteredGroups] = useState([]);
   const [form] = Form.useForm();
+  const [exportForm] = Form.useForm(); // Thêm form cho modal xuất Excel
 
   // Fetch data when component mounts
   useEffect(() => {
@@ -740,8 +743,8 @@ const ManageTeachingAssignments = () => {
     }
   }, [hocPhanList]);
 
-  // Thêm hàm xuất Excel - sửa lại phần cột Excel
-  const exportToExcel = async () => {
+  // Thêm hàm xuất Excel - sửa lại phần cột Excel và thêm lọc theo năm học
+  const exportToExcel = async (namHoc) => {
     setLoading(true);
 
     try {
@@ -752,7 +755,7 @@ const ManageTeachingAssignments = () => {
       // Thêm tiêu đề
       worksheet.mergeCells('A1:N1');
       const titleCell = worksheet.getCell('A1');
-      titleCell.value = 'PHÂN CÔNG GIẢNG DẠY';
+      titleCell.value = `PHÂN CÔNG GIẢNG DẠY ${namHoc ? `NĂM HỌC ${namHoc}` : ''}`;
       titleCell.font = { size: 16, bold: true };
       titleCell.alignment = { horizontal: 'center' };
       
@@ -838,7 +841,19 @@ const ManageTeachingAssignments = () => {
       worksheet.getColumn('Q').width = 12; // Số tiết thực tế
 
       // Lấy dữ liệu đã được xử lý
-      const data = filteredData();
+      let data = filteredData();
+      
+      // Lọc dữ liệu theo năm học nếu có
+      if (namHoc) {
+        data = data.filter(item => item.namHoc === namHoc);
+        
+        // Nếu không có dữ liệu sau khi lọc, hiển thị thông báo và dừng xuất
+        if (data.length === 0) {
+          message.info(`Không có dữ liệu phân công giảng dạy cho năm học ${namHoc}`);
+          setLoading(false);
+          return;
+        }
+      }
 
       // Nhóm dữ liệu theo học phần
       const groupedByHocPhan = {};
@@ -979,7 +994,7 @@ const ManageTeachingAssignments = () => {
       
       // Tạo blob và lưu file
       const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-      saveAs(blob, `PhanCongGiangDay_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.xlsx`);
+      saveAs(blob, `PhanCongGiangDay${namHoc ? `_${namHoc}` : ''}_${new Date().toLocaleDateString('vi-VN').replace(/\//g, '-')}.xlsx`);
       
       message.success('Xuất Excel thành công!');
     } catch (error) {
@@ -988,6 +1003,29 @@ const ManageTeachingAssignments = () => {
     } finally {
       setLoading(false);
     }
+  };
+
+  // Hàm xử lý khi nhấn nút xuất Excel
+  const handleExportClick = () => {
+    // Reset form và hiển thị modal
+    exportForm.resetFields();
+    setSelectedExportYear(null);
+    setIsExportModalVisible(true);
+  };
+
+  // Hàm xử lý khi xác nhận xuất Excel
+  const handleExportConfirm = () => {
+    const values = exportForm.getFieldsValue();
+    exportToExcel(values.namHoc);
+    setIsExportModalVisible(false);
+  };
+
+  // Lấy danh sách năm học duy nhất từ danh sách nhóm học phần
+  const getUniqueAcademicYears = () => {
+    const years = [...new Set(courseGroups
+      .filter(group => group.namHoc)
+      .map(group => group.namHoc))];
+    return years.sort();
   };
 
   // Table columns
@@ -1262,7 +1300,7 @@ const ManageTeachingAssignments = () => {
           <Button
             type="primary"
             icon={<FileExcelOutlined />}
-            onClick={exportToExcel}
+            onClick={handleExportClick}
             style={{ background: '#52c41a', borderColor: '#52c41a' }}
             loading={loading}
           >
@@ -1586,6 +1624,54 @@ const ManageTeachingAssignments = () => {
               </Button>
             </Space>
           </Form.Item>
+        </Form>
+      </Modal>
+
+      {/* Modal xuất Excel */}
+      <Modal
+        title="Xuất Excel phân công giảng dạy"
+        open={isExportModalVisible}
+        onCancel={() => setIsExportModalVisible(false)}
+        footer={null}
+        destroyOnClose={true}
+        width={500}
+      >
+        <Form 
+          form={exportForm} 
+          layout="vertical" 
+          onFinish={handleExportConfirm}
+        >
+          <Form.Item
+            name="namHoc"
+            label="Năm học"
+            rules={[{ required: true, message: 'Vui lòng chọn năm học!' }]}
+          >
+            <Select
+              placeholder="Chọn năm học cần xuất dữ liệu"
+              showSearch
+              optionFilterProp="label"
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              allowClear
+              options={getUniqueAcademicYears().map(year => ({
+                value: year,
+                label: year
+              }))}
+            />
+          </Form.Item>
+          
+          <div style={{ textAlign: 'right', marginTop: 20 }}>
+            <Space>
+              <Button onClick={() => setIsExportModalVisible(false)}>
+                Hủy
+              </Button>
+              <Button type="primary" htmlType="submit" loading={loading}>
+                Xác nhận
+              </Button>
+            </Space>
+          </div>
         </Form>
       </Modal>
     </Card>
