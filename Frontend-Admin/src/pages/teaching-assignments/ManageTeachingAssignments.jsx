@@ -22,6 +22,7 @@ const ManageTeachingAssignments = () => {
   const [lecturers, setLecturers] = useState([]);
   const [courseGroups, setCourseGroups] = useState([]);
   const [hocPhanList, setHocPhanList] = useState([]);
+  const [filteredHocPhanList, setFilteredHocPhanList] = useState([]);
   const [loading, setLoading] = useState(false);
   const [isModalVisible, setIsModalVisible] = useState(false);
   const [editingId, setEditingId] = useState(null);
@@ -73,6 +74,8 @@ const ManageTeachingAssignments = () => {
         // Chuẩn hóa tên trường nếu cần
         if (lecturersResponse.data.length > 0) {
           const firstItem = lecturersResponse.data[0];
+          console.log("Cấu trúc dữ liệu giảng viên gốc:", firstItem);
+          
           if (firstItem.ma_gv && !firstItem.maGv) {
             lecturersResponse.data = lecturersResponse.data.map(item => ({
               id: item.id,
@@ -81,7 +84,17 @@ const ManageTeachingAssignments = () => {
               boMon: item.bo_mon,
               khoa: item.khoa
             }));
+          } else {
+            // Đảm bảo tất cả giảng viên đều có trường maGv được chuẩn hóa
+            lecturersResponse.data = lecturersResponse.data.map(item => ({
+              ...item,
+              maGv: item.maGv || item.maGV || item.ma_gv || item.magv || 
+                   item.magiangvien || item.ma_giang_vien || item.maGiangVien || ''
+            }));
           }
+          
+          // Log một vài mẫu giảng viên để kiểm tra
+          console.log("Mẫu giảng viên sau khi chuẩn hóa:", lecturersResponse.data.slice(0, 2));
         }
       } catch (err) {
         console.warn('Không thể lấy dữ liệu giảng viên:', err.message);
@@ -603,12 +616,64 @@ const ManageTeachingAssignments = () => {
   const handleHocKyChange = (value) => {
     setSelectedHocKy(value);
     filterCourseGroups(value, selectedNamHoc, selectedMonHoc);
+    // Cập nhật danh sách học phần dựa trên học kỳ và năm học
+    updateFilteredHocPhanList(value, selectedNamHoc);
   };
   
   // Xử lý khi thay đổi năm học
   const handleNamHocChange = (value) => {
     setSelectedNamHoc(value);
     filterCourseGroups(selectedHocKy, value, selectedMonHoc);
+    // Cập nhật danh sách học phần dựa trên học kỳ và năm học
+    updateFilteredHocPhanList(selectedHocKy, value);
+  };
+  
+  // Hàm cập nhật danh sách học phần dựa trên học kỳ và năm học đã chọn
+  const updateFilteredHocPhanList = (hocKy, namHoc) => {
+    try {
+      if (!hocKy && !namHoc) {
+        // Nếu không chọn học kỳ và năm học, hiển thị tất cả học phần
+        setFilteredHocPhanList(hocPhanList);
+        return;
+      }
+
+      // Lọc danh sách nhóm học phần theo học kỳ và năm học
+      const filteredNhomHocPhan = courseGroups.filter(group => {
+        let matchHocKy = true;
+        let matchNamHoc = true;
+        
+        if (hocKy !== null) {
+          matchHocKy = group.hocKy === hocKy;
+        }
+        
+        if (namHoc !== null) {
+          matchNamHoc = group.namHoc === namHoc;
+        }
+        
+        return matchHocKy && matchNamHoc;
+      });
+      
+      // Lấy danh sách id học phần duy nhất từ các nhóm đã lọc
+      const hocPhanIds = [...new Set(filteredNhomHocPhan
+        .filter(group => group.hocPhanId || (group.hocPhan && group.hocPhan.id))
+        .map(group => group.hocPhanId || (group.hocPhan && group.hocPhan.id)))];
+      
+      // Lọc danh sách học phần theo các id đã tìm được
+      const filteredHocPhan = hocPhanList.filter(hp => hocPhanIds.includes(hp.id));
+      
+      console.log(`Đã lọc được ${filteredHocPhan.length} học phần thuộc học kỳ ${hocKy}, năm học ${namHoc}`);
+      setFilteredHocPhanList(filteredHocPhan);
+      
+      // Nếu đang chọn một môn học không thuộc danh sách đã lọc, reset giá trị
+      if (selectedMonHoc && !hocPhanIds.includes(selectedMonHoc)) {
+        setSelectedMonHoc(null);
+      }
+    } catch (error) {
+      console.error('Lỗi khi lọc danh sách học phần:', error);
+      message.error('Có lỗi xảy ra khi lọc danh sách học phần');
+      // Trong trường hợp lỗi, hiển thị tất cả học phần
+      setFilteredHocPhanList(hocPhanList);
+    }
   };
   
   // Xử lý khi thay đổi môn học
@@ -668,7 +733,14 @@ const ManageTeachingAssignments = () => {
     }
   }, [lecturers, courseGroups, hocPhanList]);
 
-  // Thêm hàm xuất Excel
+  // Thêm đoạn code khởi tạo danh sách học phần lọc ban đầu
+  useEffect(() => {
+    if (hocPhanList.length > 0) {
+      setFilteredHocPhanList(hocPhanList);
+    }
+  }, [hocPhanList]);
+
+  // Thêm hàm xuất Excel - sửa lại phần cột Excel
   const exportToExcel = async () => {
     setLoading(true);
 
@@ -792,11 +864,16 @@ const ManageTeachingAssignments = () => {
           };
         }
         
+        // Lấy mã giảng viên từ nhiều trường khác nhau
+        const lecturer = lecturers.find(l => l.id === item.giangVienId) || {};
+        const maCBGD = lecturer.maGiangVien || lecturer.maGv || lecturer.maGV || 
+                     lecturer.ma_gv || lecturer.magv || lecturer.magiangvien || '';
+        
         // Thêm phân công giảng dạy vào học phần
         groupedByHocPhan[maHocPhan].assignments.push({
           ...item,
           nhom: courseGroup.maNhom || '',
-          maCBGD: lecturers.find(l => l.id === item.giangVienId)?.maGv || '',
+          maCBGD: maCBGD, // Đã cập nhật để nhận dạng đúng mã giảng viên
           tenCBGD: item.tenGiangVien || '',
           soTietThucHien: item.soTiet || 0,
           soTietThucTe: item.soTiet || 0 // Mặc định bằng số tiết thực hiện
@@ -888,7 +965,7 @@ const ManageTeachingAssignments = () => {
           // Căn giữa cho một số cột
           [`A${currentRow}`, `B${currentRow}`, `D${currentRow}`, `F${currentRow}`, 
            `G${currentRow}`, `H${currentRow}`, `I${currentRow}`, `J${currentRow}`, 
-           `K${currentRow}`, `L${currentRow}`, `M${currentRow}`, `P${currentRow}`, 
+           `K${currentRow}`, `L${currentRow}`, `M${currentRow}`, `N${currentRow}`, `P${currentRow}`, 
            `Q${currentRow}`].forEach(cell => {
             worksheet.getCell(cell).alignment.horizontal = 'center';
           });
@@ -927,10 +1004,14 @@ const ManageTeachingAssignments = () => {
       key: 'tenGiangVien',
       render: (text, record) => {
         const lecturer = lecturers.find(lec => lec.id === record.giangVienId) || {};
+        // Nhận dạng đúng các trường mã giảng viên có thể có
+        const maGiangVien = lecturer.maGiangVien || lecturer.maGv || lecturer.maGV || 
+                            lecturer.ma_gv || lecturer.magv || lecturer.magiangvien || '';
+        
         return (
           <Tooltip title={`${record.boMon || ''} - ${record.khoa || ''}`}>
             <span>
-              {lecturer.maGv ? <Tag color="blue">{lecturer.maGv}</Tag> : null} {text || `ID: ${record.giangVienId}`}
+              {text || `ID: ${record.giangVienId}`}
             </span>
           </Tooltip>
         );
@@ -1029,6 +1110,12 @@ const ManageTeachingAssignments = () => {
                 const lecturer = lecturers.find(lec => lec.id === record.giangVienId) || {};
                 const courseGroup = courseGroups.find(group => group.id === record.nhomId) || {};
                 
+                console.log("Dữ liệu giảng viên chi tiết:", lecturer);
+                
+                // Nhận dạng đúng các trường mã giảng viên có thể có
+                const maGiangVien = lecturer.maGiangVien || lecturer.maGv || lecturer.maGV || 
+                                    lecturer.ma_gv || lecturer.magv || lecturer.magiangvien || '';
+                
                 // Lấy thông tin học phần từ nhóm
                 let tenHocPhan = '';
                 let maHocPhan = '';
@@ -1038,7 +1125,13 @@ const ManageTeachingAssignments = () => {
                   tenHocPhan = courseGroup.hocPhan.tenHp;
                   maHocPhan = courseGroup.hocPhan.maHp;
                 } else if (courseGroup.hocPhanId) {
-                  tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+                  const hocPhan = hocPhanList.find(hp => hp.id === courseGroup.hocPhanId);
+                  if (hocPhan) {
+                    tenHocPhan = hocPhan.tenHp || hocPhan.tenHP || hocPhan.ten_hp;
+                    maHocPhan = hocPhan.maHp || hocPhan.maHP || hocPhan.ma_hp;
+                  } else {
+                    tenHocPhan = `ID: ${courseGroup.hocPhanId}`;
+                  }
                 } else if (courseGroup.tenHocPhan) {
                   tenHocPhan = courseGroup.tenHocPhan;
                   maHocPhan = courseGroup.maHocPhan;
@@ -1051,9 +1144,9 @@ const ManageTeachingAssignments = () => {
                     <div style={{ marginTop: 16 }}>
                       <div style={{ marginBottom: 16 }}>
                         <h3>Thông tin giảng viên</h3>
-                        <p><strong>Họ tên:</strong> {lecturer.hoTen || 'N/A'}</p>
-                        <p><strong>Mã giảng viên:</strong> {lecturer.maGv || lecturer.maGV || lecturer.magiangvien || 'N/A'}</p>
-                        <p><strong>Bộ môn:</strong> {lecturer.boMon || 'N/A'}</p>
+                        <p><strong>Họ tên:</strong> {lecturer.hoTen || lecturer.ho_ten || lecturer.ten || 'N/A'}</p>
+                        <p><strong>Mã giảng viên:</strong> {maGiangVien || 'N/A'}</p>
+                        <p><strong>Bộ môn:</strong> {lecturer.boMon || lecturer.bo_mon || 'N/A'}</p>
                         <p><strong>Khoa:</strong> {lecturer.khoa || 'N/A'}</p>
                       </div>
                       
@@ -1061,7 +1154,7 @@ const ManageTeachingAssignments = () => {
                       
                       <div style={{ marginBottom: 16 }}>
                         <h3>Thông tin nhóm học phần</h3>
-                        <p><strong>Mã nhóm:</strong> {courseGroup.maNhom || 'N/A'}</p>
+                        <p><strong>Mã nhóm:</strong> {courseGroup.maNhom || courseGroup.ma_nhom || 'N/A'}</p>
                         <p><strong>Mã học phần:</strong> {maHocPhan || 'N/A'}</p>
                         <p><strong>Tên học phần:</strong> {tenHocPhan || 'N/A'}</p>
                         <p><strong>Học kỳ:</strong> {courseGroup.hocKy ? `Học kỳ ${courseGroup.hocKy} năm ${courseGroup.namHoc}` : 'N/A'}</p>
@@ -1204,6 +1297,8 @@ const ManageTeachingAssignments = () => {
           console.log("Trạng thái modal:", visible ? "Đã mở" : "Đã đóng");
           if (visible) {
             console.log("Modal đã mở, số lượng nhóm học phần:", filteredGroups.length);
+            // Khởi tạo danh sách học phần lọc khi mở modal
+            updateFilteredHocPhanList(selectedHocKy, selectedNamHoc);
           }
         }}
         destroyOnClose={true}
@@ -1293,20 +1388,25 @@ const ManageTeachingAssignments = () => {
                       <Select
                         showSearch
                         placeholder="Tìm môn học"
-                        optionFilterProp="children"
+                        optionFilterProp="label"
                         value={selectedMonHoc}
                         onChange={handleMonHocChange}
-                        filterOption={(input, option) =>
-                          option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-                        }
+                        filterOption={(input, option) => {
+                          // Sử dụng optionFilterProp="label" và kiểm tra xem option có tồn tại không
+                          if (!option || !option.label) return false;
+                          return option.label.toLowerCase().includes(input.toLowerCase());
+                        }}
                         allowClear
-                      >
-                        {hocPhanList.map(hp => (
-                          <Option key={hp.id} value={hp.id}>
-                            {hp.maHp || hp.maHP || hp.ma_hp ? `[${hp.maHp || hp.maHP || hp.ma_hp}] ` : ''}{hp.tenHp || hp.tenHP || hp.ten_hp || ''}
-                          </Option>
-                        ))}
-                      </Select>
+                        options={filteredHocPhanList.map(hp => {
+                          const maHp = hp.maHp || hp.maHP || hp.ma_hp || '';
+                          const tenHp = hp.tenHp || hp.tenHP || hp.ten_hp || '';
+                          const label = `${maHp ? `[${maHp}] ` : ''}${tenHp}`;
+                          return {
+                            value: hp.id,
+                            label: label
+                          };
+                        })}
+                      />
                     </Form.Item>
                   </Col>
                 </Row>
@@ -1322,9 +1422,10 @@ const ManageTeachingAssignments = () => {
             <Select
               placeholder="Chọn nhóm học phần"
               showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
               disabled={editingId !== null}
               optionLabelProp="label"
               onChange={(value) => {
@@ -1346,8 +1447,7 @@ const ManageTeachingAssignments = () => {
                   });
                 }
               }}
-            >
-              {filteredGroups.map(group => {
+              options={filteredGroups.map(group => {
                 const isAssigned = group.isAssigned;
                 const assignmentInfo = group.assignmentInfo;
                 const lecturer = lecturers.find(l => l.id === assignmentInfo?.giangVienId);
@@ -1363,23 +1463,34 @@ const ManageTeachingAssignments = () => {
                   ? `[Đã phân công: ${lecturer?.hoTen || 'Không xác định'}]` 
                   : '';
                 
-                return (
-                  <Option 
-                    key={group.id} 
-                    value={group.id}
-                    label={displayText}
-                    disabled={isAssigned && form.getFieldValue('vaiTro') === 'Phụ trách'}
-                  >
+                return {
+                  value: group.id,
+                  label: displayText,
+                  disabled: isAssigned && form.getFieldValue('vaiTro') === 'Phụ trách',
+                  // Các thông tin bổ sung để hiển thị trong option
+                  render: (
                     <div style={{ display: 'flex', justifyContent: 'space-between' }}>
                       <span>{displayText}</span>
                       {isAssigned && (
                         <Tag color="red">{assignedText}</Tag>
                       )}
                     </div>
-                  </Option>
-                );
+                  )
+                };
               })}
-            </Select>
+              dropdownRender={menu => {
+                return (
+                  <div>
+                    {menu}
+                    {filteredGroups.length === 0 && (
+                      <div style={{ padding: '8px', textAlign: 'center' }}>
+                        <span>Không tìm thấy nhóm học phần phù hợp</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
           </Form.Item>
           
           <Form.Item
@@ -1390,16 +1501,28 @@ const ManageTeachingAssignments = () => {
             <Select
               placeholder="Chọn giảng viên"
               showSearch
-              filterOption={(input, option) =>
-                option.children.toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {lecturers.map(lecturer => (
-                <Option key={lecturer.id} value={lecturer.id}>
-                  {lecturer.maGv ? `[${lecturer.maGv}] ` : ''}{lecturer.hoTen || 'Không xác định'}
-                </Option>
-              ))}
-            </Select>
+              optionFilterProp="label"
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={lecturers.map(lecturer => ({
+                value: lecturer.id,
+                label: `${lecturer.maGv ? `[${lecturer.maGv}] ` : ''}${lecturer.hoTen || 'Không xác định'}`,
+              }))}
+              dropdownRender={menu => {
+                return (
+                  <div>
+                    {menu}
+                    {lecturers.length === 0 && (
+                      <div style={{ padding: '8px', textAlign: 'center' }}>
+                        <span>Không tìm thấy giảng viên</span>
+                      </div>
+                    )}
+                  </div>
+                );
+              }}
+            />
           </Form.Item>
           
           <Form.Item

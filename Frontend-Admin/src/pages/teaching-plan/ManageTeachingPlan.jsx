@@ -778,19 +778,22 @@ const ManageTeachingPlan = () => {
             <Select
               placeholder="Chọn chương trình đào tạo"
               showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.children || "")
-                  .toLowerCase()
-                  .indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {curriculums.map((curriculum) => (
-                <Option key={curriculum.id} value={curriculum.id}>
-                  {curriculum.ma_ctdt} - {curriculum.ten_ctdt}
-                </Option>
-              ))}
-            </Select>
+              optionFilterProp="label"
+              optionLabelProp="label"
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={curriculums.map((curriculum) => ({
+                value: curriculum.id,
+                label: `${curriculum.ma_ctdt} - ${curriculum.ten_ctdt}`
+              }))}
+              onChange={(value) => {
+                form.setFieldsValue({ hoc_phan_id: undefined }); // Reset học phần khi đổi CTĐT
+                const available = getAvailableCourses(value);
+                setAvailableCourses(available);
+              }}
+            />
           </Form.Item>
 
           <Form.Item
@@ -802,21 +805,19 @@ const ManageTeachingPlan = () => {
             <Select
               placeholder="Chọn học phần"
               showSearch
-              optionFilterProp="children"
+              optionFilterProp="label"
+              optionLabelProp="label"
               loading={courseLoading}
               disabled={!form.getFieldValue("ctdt_id")}
-              filterOption={(input, option) =>
-                (option?.children || "")
-                  .toLowerCase()
-                  .indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {availableCourses.map((course) => (
-                <Option key={course.id} value={course.id}>
-                  {course.ma_hp} - {course.ten_hp} ({course.so_tin_chi} TC)
-                </Option>
-              ))}
-            </Select>
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={availableCourses.map((course) => ({
+                value: course.id,
+                label: `${course.ma_hp} - ${course.ten_hp} (${course.so_tin_chi} TC)`
+              }))}
+            />
           </Form.Item>
 
           <div style={{ display: "flex", gap: "16px" }}>
@@ -920,17 +921,17 @@ const ManageTeachingPlan = () => {
             <Select
               placeholder="Chọn chương trình đào tạo"
               showSearch
-              optionFilterProp="children"
-              filterOption={(input, option) =>
-                (option?.children || "").toLowerCase().indexOf(input.toLowerCase()) >= 0
-              }
-            >
-              {curriculums.map((curriculum) => (
-                <Option key={curriculum.id} value={curriculum.id}>
-                  {curriculum.ma_ctdt} - {curriculum.ten_ctdt}
-                </Option>
-              ))}
-            </Select>
+              optionFilterProp="label"
+              optionLabelProp="label"
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={curriculums.map((curriculum) => ({
+                value: curriculum.id,
+                label: `${curriculum.ma_ctdt} - ${curriculum.ten_ctdt}`
+              }))}
+            />
           </Form.Item>
 
           <Form.Item style={{ marginBottom: 0, textAlign: "right" }}>

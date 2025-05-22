@@ -26,6 +26,7 @@ const ManageCourseGroups = () => {
   const [editingId, setEditingId] = useState(null);
   const [searchText, setSearchText] = useState('');
   const [semesterFilter, setSemesterFilter] = useState('all');
+  const [yearFilter, setYearFilter] = useState('all');
   const [form] = Form.useForm();
   const [addType, setAddType] = useState('single'); // 'single' hoặc 'multiple'
   const [bulkCount, setBulkCount] = useState(1); // Số lượng khi thêm nhiều
@@ -33,6 +34,7 @@ const ManageCourseGroups = () => {
   const [coursesInPlan, setCoursesInPlan] = useState([]);
   const [selectedYear, setSelectedYear] = useState('');
   const [selectedSemester, setSelectedSemester] = useState(null);
+  const [filteredCourses, setFilteredCourses] = useState([]);
   
   // Lấy ngày hiện tại cho validation
   const today = moment().startOf('day');
@@ -146,6 +148,11 @@ const ManageCourseGroups = () => {
     setSemesterFilter(value);
   };
 
+  // Xử lý lọc theo năm học (mới)
+  const handleYearFilter = (value) => {
+    setYearFilter(value);
+  };
+
   // Lọc dữ liệu theo điều kiện
   const filteredData = () => {
     let result = [...courseGroups];
@@ -164,6 +171,11 @@ const ManageCourseGroups = () => {
     if (semesterFilter !== 'all') {
       const semesterId = parseInt(semesterFilter);
       result = result.filter(group => group.hocKy === semesterId);
+    }
+
+    // Lọc theo năm học (mới)
+    if (yearFilter !== 'all') {
+      result = result.filter(group => group.namHoc === yearFilter);
     }
 
     return result;
@@ -508,25 +520,32 @@ const ManageCourseGroups = () => {
     }
   };
 
-  // Xử lý khi thay đổi học kỳ
-  const handleSemesterChange = (value) => {
-    setSelectedSemester(value);
-    
-    // Nếu đã chọn cả năm học và học kỳ, lấy danh sách học phần từ kế hoạch dạy học
-    if (selectedYear && value) {
-      fetchCoursesFromTeachingPlan(selectedYear, value);
+  // Cập nhật danh sách học phần lọc khi thay đổi năm học và học kỳ
+  const updateFilteredCourses = () => {
+    try {
+      // Chỉ lọc khi đã chọn cả năm học và học kỳ
+      if (selectedYear && selectedSemester) {
+        if (coursesInPlan.length > 0) {
+          setFilteredCourses(coursesInPlan);
+        } else {
+          // Nếu không có học phần trong kế hoạch, hiển thị toàn bộ
+          setFilteredCourses(courses);
+        }
+      } else {
+        // Nếu chưa chọn năm học hoặc học kỳ, hiển thị toàn bộ
+        setFilteredCourses(courses);
+      }
+    } catch (error) {
+      console.error('Lỗi khi cập nhật danh sách học phần:', error);
+      // Trong trường hợp lỗi, hiển thị toàn bộ
+      setFilteredCourses(courses);
     }
   };
 
-  // Xử lý khi thay đổi năm học
-  const handleAcademicYearChange = (value) => {
-    setSelectedYear(value);
-    
-    // Nếu đã chọn cả năm học và học kỳ, lấy danh sách học phần từ kế hoạch dạy học
-    if (value && selectedSemester) {
-      fetchCoursesFromTeachingPlan(value, selectedSemester);
-    }
-  };
+  // Sử dụng useEffect để cập nhật danh sách học phần lọc khi có sự thay đổi
+  useEffect(() => {
+    updateFilteredCourses();
+  }, [selectedYear, selectedSemester, coursesInPlan, courses]);
 
   // Định nghĩa các cột trong bảng
   const columns = [
@@ -692,18 +711,29 @@ const ManageCourseGroups = () => {
             onChange={handleSearch}
             allowClear
           />
+          {/* Combobox lọc theo năm học */}
+          <Select
+            placeholder="Năm học"
+            style={{ width: 150 }}
+            value={yearFilter}
+            onChange={handleYearFilter}
+          >
+            <Option value="all">Tất cả năm học</Option>
+            {academicYears.map(year => (
+              <Option key={year} value={year}>{year}</Option>
+            ))}
+          </Select>
+          {/* Combobox lọc theo học kỳ */}
           <Select
             placeholder="Học kỳ"
-            style={{ width: 250 }}
+            style={{ width: 150 }}
             value={semesterFilter}
             onChange={handleSemesterFilter}
           >
             <Option value="all">Tất cả học kỳ</Option>
-            {semesters.map(semester => (
-              <Option key={semester.id} value={semester.id.toString()}>
-                {semester.ten_hoc_ky}
-              </Option>
-            ))}
+            <Option value="1">Học kỳ 1</Option>
+            <Option value="2">Học kỳ 2</Option>
+            <Option value="3">Học kỳ 3</Option>
           </Select>
           <Button 
             type="primary" 
@@ -713,6 +743,8 @@ const ManageCourseGroups = () => {
               form.resetFields();
               setAddType('single');
               setIsModalVisible(true);
+              // Đảm bảo danh sách học phần được reset
+              setFilteredCourses(courses);
             }}
           >
             Thêm mới
@@ -817,7 +849,7 @@ const ManageCourseGroups = () => {
                     placeholder="Chọn năm học"
                     disabled={!!editingId}
                     onChange={(value) => {
-                      handleAcademicYearChange(value);
+                      handleYearFilter(value);
                       // Reset giá trị học phần khi thay đổi năm học
                       form.setFieldsValue({ hocPhanId: undefined });
                     }}
@@ -838,7 +870,7 @@ const ManageCourseGroups = () => {
                     placeholder="Chọn học kỳ"
                     disabled={!!editingId}
                     onChange={(value) => {
-                      handleSemesterChange(value);
+                      handleSemesterFilter(value);
                       // Reset giá trị học phần khi thay đổi học kỳ
                       form.setFieldsValue({ hocPhanId: undefined });
                     }}
@@ -862,7 +894,7 @@ const ManageCourseGroups = () => {
             </Col>
           </Row>
           
-          {/* Học phần (chỉ hiển thị khi đã chọn năm học và học kỳ) */}
+          {/* Học phần (cải tiến chức năng tìm kiếm) */}
           <Form.Item
             name="hocPhanId"
             label="Học phần"
@@ -872,6 +904,7 @@ const ManageCourseGroups = () => {
               showSearch
               placeholder="Chọn học phần"
               disabled={!!editingId}
+              optionFilterProp="label"
               onChange={(value) => {
                 // Reset giá trị nhóm khi thay đổi học phần
                 form.setFieldsValue({ maNhom: null });
@@ -879,40 +912,29 @@ const ManageCourseGroups = () => {
                   setTimeout(generateGroupCode, 100);
                 }
               }}
-              filterOption={(input, option) => 
-                option.children.toLowerCase().includes(input.toLowerCase())
-              }
-              notFoundContent={
-                coursesInPlan.length === 0 && selectedYear && selectedSemester ? (
-                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                    <div>Không tìm thấy học phần trong kế hoạch dạy học</div>
-                    <div style={{ fontSize: '12px', color: '#999' }}>
-                      Vui lòng kiểm tra lại kế hoạch dạy học cho học kỳ {selectedSemester} năm {selectedYear}
+              filterOption={(input, option) => {
+                if (!option || !option.label) return false;
+                return option.label.toLowerCase().includes(input.toLowerCase());
+              }}
+              options={filteredCourses.map(course => ({
+                value: course.id,
+                label: `${course.maHp || ''} - ${course.tenHp || ''}`
+              }))}
+              dropdownRender={menu => (
+                <div>
+                  {menu}
+                  {filteredCourses.length === 0 && (
+                    <div style={{ textAlign: 'center', padding: '8px 0' }}>
+                      {selectedYear && selectedSemester ? (
+                        <div>Không tìm thấy học phần trong kế hoạch dạy học</div>
+                      ) : (
+                        <div>Vui lòng chọn năm học và học kỳ trước</div>
+                      )}
                     </div>
-                  </div>
-                ) : (
-                  <div style={{ textAlign: 'center', padding: '8px 0' }}>
-                    <div>Vui lòng chọn năm học và học kỳ trước</div>
-                  </div>
-                )
-              }
-            >
-              {/* Hiển thị danh sách học phần từ kế hoạch dạy học nếu có */}
-              {coursesInPlan.length > 0 ? (
-                coursesInPlan.map(course => (
-                  <Option key={course.id} value={course.id}>
-                    {course.maHp} - {course.tenHp}
-                  </Option>
-                ))
-              ) : (
-                // Hiển thị học phần chỉ khi chưa chọn năm học và học kỳ
-                (!selectedYear || !selectedSemester) && courses.map(course => (
-                  <Option key={course.id} value={course.id}>
-                    {course.maHp} - {course.tenHp}
-                  </Option>
-                ))
+                  )}
+                </div>
               )}
-            </Select>
+            />
           </Form.Item>
           
           <Form.Item
